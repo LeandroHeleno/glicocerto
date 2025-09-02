@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <base href="/glicocerto/">
   <link rel="manifest" href="/glicocerto/manifest.webmanifest">
@@ -10,6 +10,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <link rel="apple-touch-icon" href="/glicocerto/icons/icon-192.png">
   <title>GlicoCerto</title>
+
+  <!-- ====== ESTILOS ====== -->
   <style>
     :root { --brand:#2aa775; --brand-700:#248c62; --bg:#f6f6f6; --text:#1f2937; --muted:#6b7280; --card:#ffffff; --border:#e7e7e7; --thead:#f5f5f5; }
     :root[data-theme="dark"]{ --bg:#0b0b0c; --card:#111114; --text:#e5e7eb; --border:#25262b; --muted:#9ca3af; --thead:#141519; }
@@ -25,30 +27,26 @@
     .left-brand{ display:flex; align-items:center; gap:8px; }
     .auth-box{ display:flex; align-items:center; gap:8px; flex-wrap:nowrap; }
 
-    /* Ícone único de tema */
     .theme-icon-btn{
       background:rgba(255,255,255,.18); color:#fff; border:1px solid rgba(255,255,255,.25);
       width:36px; height:36px; border-radius:999px; font-size:16px; cursor:pointer;
       display:grid; place-items:center; line-height:1;
     }
 
-    /* Badge Nightscout – COMPACTO */
     .ns-badge{
       background:#ffffff; color:#111827; border-radius:999px;
       padding:4px 8px; min-height:28px; display:none; align-items:center; justify-content:center; gap:6px; white-space:nowrap;
-      border:1px solid rgba(0,0,0,.06); font-weight:700; font-size:12px; /* menor */
+      border:1px solid rgba(0,0,0,.06); font-weight:700; font-size:12px;
       max-width: 38vw; overflow:hidden; text-overflow:ellipsis;
     }
     .ns-badge .dot{width:8px; height:8px; border-radius:50%; background:#10b981; display:inline-block}
 
-    /* Usuário + menu */
     .user-chip{ display:flex; align-items:center; gap:6px; position:relative; }
     .avatar,.initials{ width:28px; height:28px; border-radius:50%; }
     .avatar{ object-fit:cover; background:#eee; border:1px solid rgba(0,0,0,.05); }
     .initials{ display:grid; place-items:center; background:#0ea5e9; color:#fff; font-weight:700; font-size:12px; border:1px solid rgba(0,0,0,.05); }
     .menu-btn{ background:#fff; color:#111827; border:none; border-radius:10px; min-height:32px; padding:6px 10px; cursor:pointer; font-weight:600; }
 
-    /* Dropdown que respeita o TEMA */
     .dropdown{
       position:absolute; right:0; top:42px; background:var(--card); color:var(--text);
       border:1px solid var(--border); border-radius:12px; min-width:200px;
@@ -93,22 +91,25 @@
 
     .muted { color:var(--muted); font-size:12px; }
     .note{background:#fff3cd;border:1px solid #ffeeba;color:#856404;padding:10px;border-radius:10px;margin-top:10px;}
-    .resumo { white-space:pre-wrap; background:var(--card); color:var(--text); border:1px solid var(--border); border-radius:10px; padding:12px; margin-top:12px; }
+    .resumo { white-space:pre-wrap; background:var(--card); color:var(--text); border:1px solid var(--border); border-radius:10px; padding:12px; margin-top:12px; word-break: break-word; }
     .resumo strong{ font-weight:800 }
     .disclaimer { margin-top:10px; font-size:12px; color:#666; }
     details summary { cursor:pointer; user-select:none; }
     .ok{color:#1e7e34} .err{color:#b91c1c}
 
-    .table-wrap { overflow:auto; -webkit-overflow-scrolling:touch; border:1px solid var(--border); border-radius:12px; }
+    .table-wrap { max-width:100%; overflow:auto; -webkit-overflow-scrolling:touch; border:1px solid var(--border); border-radius:12px; }
     table { width:100%; border-collapse: collapse; min-width: 900px; background: var(--card); color: var(--text); }
     th, td { border-bottom:1px solid var(--border); padding:10px 8px; text-align:left; font-size:14px; vertical-align:top; }
     th { background: var(--thead); position: sticky; top:0; z-index:1; }
     .btn-del { background:#e11d48; color:#fff; border:none; padding:8px 10px; border-radius:10px; cursor:pointer; min-height:40px; }
 
-    .details-clean { border:1px solid var(--border); border-radius:10px; padding:10px; background:var(--card); }
+    .details-clean { border:1px solid var(--border); border-radius:10px; padding:10px; background:var(--card); overflow:hidden; }
     .details-clean .gc-table{ width:100%; border-collapse:collapse; font-size:14px; }
     .details-clean .gc-table th, .details-clean .gc-table td{ border:1px solid var(--border); padding:6px 8px; text-align:left; }
     .details-clean .gc-table th{ background:var(--thead); }
+    .details-clean table { width:100%; table-layout: fixed; border-collapse: collapse; }
+    .details-clean th, .details-clean td { word-break: break-word; }
+    .details-clean pre { white-space: pre-wrap; overflow: auto; }
 
     .bottom-nav{ position:fixed; left:0; right:0; bottom:0; height:64px; background:var(--card); border-top:1px solid var(--border); display:none; align-items:center; justify-content:space-around; z-index:200; }
     .bottom-nav button{ background:none; border:none; font:inherit; color:var(--text); display:flex; flex-direction:column; align-items:center; gap:4px; padding:8px 12px; border-radius:12px; }
@@ -125,29 +126,23 @@
     html[data-theme="dark"] input, html[data-theme="dark"] select, html[data-theme="dark"] textarea{ color-scheme: dark; }
   </style>
 
+  <!-- libs usadas no front -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.55.0/dist/umd/supabase.js" defer></script>
 </head>
 <body>
   <header>
     <div class="left-brand"><span>💬</span><span>GlicoCerto</span></div>
-
     <div class="auth-box">
-      <!-- Ícone de tema -->
+      <button id="btnInstall" class="menu-btn" style="display:none">Instalar</button>
       <button id="themeBtn" class="theme-icon-btn" aria-label="Tema">☼</button>
-      <!-- botão de instalação-->
-      <button id="btnInstall" class="menu-btn">Instalar</button>
-      <!-- Nightscout badge (compacto) -->
       <div id="nsBadge" class="ns-badge" title="Glicemia atual (Nightscout)">
         <span class="dot"></span><span id="nsBadgeVal">--</span>
       </div>
-
-      <!-- Usuário + menu -->
       <div class="user-chip" id="userChip" style="display:none">
         <img id="userAvatar" class="avatar" alt="perfil" referrerpolicy="no-referrer" crossorigin="anonymous"
              onerror="this.style.display='none';document.getElementById('userInitials').style.display='grid'">
         <div id="userInitials" class="initials" style="display:none"></div>
-
         <button class="menu-btn" id="menuBtn" title="Menu">☰</button>
         <div class="dropdown" id="userMenu" role="menu" aria-label="Menu do usuário">
           <div class="hd">Menu</div>
@@ -156,12 +151,12 @@
           <button data-menu="sair">⎋ Sair</button>
         </div>
       </div>
-
       <button class="menu-btn" id="btnLogin" style="display:none">Entrar</button>
     </div>
   </header>
 
   <main>
+    <!-- Gate (logout) -->
     <section id="gate" class="card" style="display:block; text-align:center; padding:28px;">
       <h2 style="margin:0 0 6px">Bem-vindo ao GlicoCerto</h2>
       <p style="margin:0 0 16px">Faça login para acessar seu perfil, configurações e histórico.</p>
@@ -169,6 +164,7 @@
       <p class="muted" style="margin-top:12px;">Seu acesso é individual e seguro.</p>
     </section>
 
+    <!-- App (logado) -->
     <div id="app" style="display:none;">
       <div class="tabs">
         <button class="tab-btn active" data-tab="paciente">Paciente</button>
@@ -328,83 +324,9 @@
       <!-- Ajuda -->
       <section id="ajuda" class="card" style="display:none">
         <h2 style="margin-top:0">Ajuda (FAQ)</h2>
-        <details open>
-          <b>Visão geral do app</b>
-          <div class="details-clean">
-            <p>O GlicoCerto calcula doses a partir da sua <b>Anamnese</b> (configurações do paciente) e da <b>Refeição</b> informada no <b>Chat</b> (texto e/ou foto) com a <b>Glicemia</b> atual. O <b>Histórico</b> lista e permite filtrar/excluir registros. O <b>Tema</b> pode ser claro (☀️) ou escuro (🌙).</p>
-          </div>
-        </details>
         <div class="details-clean">
-          
-          <h3>Conceitos básicos</h3>
-          <ul>
-            <li><b>ICR (Insulin-to-Carb Ratio)</b>: quantos gramas de carboidrato são cobertos por 1 unidade (U) de insulina <b>ultra-rápida</b>. Ex.: ICR=10 → 10 g de carbo = 1 U.</li>
-            <li><b>ISF (Insulin Sensitivity Factor)</b>: redução esperada da glicemia (mg/dL) por 1 U de insulina. Ex.: ISF=50 → 1 U reduz ~50 mg/dL.</li>
-            <li><b>Alvo</b>: valor de glicemia desejado após correção. Se a glicemia atual estiver acima do alvo, entra a <b>dose de correção</b> = (glicemia atual − alvo)/ISF.</li>
-            <li><b>CHO equivalente de Proteína+Gordura (P+G)</b>: parte calórica de P+G que pode elevar a glicemia tardiamente. O app converte uma fração dessa energia em “g de CHO equivalente”.</li>
-          </ul>
-
-          <h3>Por que preencher cada campo da Anamnese?</h3>
-          <ul>
-            <li><b>Insulina Rápida</b> (ultra-rápida: Fiasp, Humalog/Lispro, Novorapid/Aspart): aparece nas recomendações e é usada para <b>carboidratos</b> e <b>correção</b>.</li>
-            <li><b>ICR</b>: determina a <b>dose para carboidratos</b>. DoseCarbo = CHO_total/ICR.</li>
-            <li><b>ISF</b>: determina a <b>dose de correção</b>. DoseCorreção = max(0, (Glicemia−Alvo)/ISF).</li>
-            <li><b>Alvo</b>: ponto de referência da correção (nem sempre 100; use seu alvo clínico).</li>
-            <li><b>% P+G</b> e <b>Estratégia</b>: definem <b>se</b> e <b>como</b> entra dose para proteína+gordura (tardia).</li>
-            <li><b>Insulina Basal</b> (ex.: Tresiba, Lantus, Levemir, NPH): informativa; não entra no cálculo de refeição aqui.</li>
-            <li><b>Dose diária basal</b>: informativa; útil para revisão clínica.</li>
-            <li><b>Hipo/Hiper</b>: limites para avisos no fluxo (informativos).</li>
-            <li><b>Nightscout</b>: permite <b>preencher automaticamente</b> a glicemia atual.</li>
-          </ul>
-
-          <h3>Estratégias para Proteína+Gordura (P+G)</h3>
-          <ul>
-            <li><b>Usar Regular agora</b>: o app converte P+G em CHO eq e calcula <b>dose com Insulina Regular (R)</b> <i>no momento da refeição</i>. Você pode aplicar <b>duas doses agora</b>: ultra-rápida (carbo+correção) e Regular (P+G).</li>
-            <li><b>Não aplicar agora (somente ultra-rápida)</b>: o app <b>não</b> soma a parte de P+G no imediato. <u>Orientação</u>: aplicar uma <b>segunda dose</b> (referente à gordura/proteína) cerca de <b>1 hora após a refeição</b> usando sua <b>insulina ultra-rápida</b>. Essa abordagem pode reduzir pico tardio, mas deve ser confirmada com seu time de saúde.</li>
-          </ul>
-
-          <h3>Quais insulinas posso informar?</h3>
-          <ul>
-            <li><b>Rápida (campo “Insulina Rápida”)</b>: Fiasp, Humalog/Lispro, Novorapid/Aspart, Apidra, Admelog etc. (as de ação ultra-rápida).</li>
-            <li><b>Regular (usada para P+G quando escolher “Regular agora”)</b>: “Insulina Regular” (R).</li>
-            <li><b>Basais (campo “Insulina Basal”)</b>: Tresiba, Lantus, Levemir, NPH etc. (só informativo).</li>
-          </ul>
-
-          <h3>Nightscout — o que é e como obter?</h3>
-          <p><b>Nightscout</b> é um serviço comunitário para visualizar glicemias (CGM) em tempo real. Você pode:
-          <ol>
-            <li>Hospedar gratuitamente (por ex., em Render/Heroku) com seu banco de dados; ou</li>
-            <li>Usar serviços pagos que já entregam uma URL pronta.</li>
-          </ol>
-          Após configurado, informe a <b>URL</b> no app (ex.: <i>https://seu-ns.onrender.com</i>). Se sua instância exigir, adicione o <b>API_SECRET</b>. O app buscará o último valor (“entries.json?count=1”) para preencher a glicemia e mostrar o badge no topo.</p>
-
-          <h3>Como usar o Chat</h3>
-          <ul>
-            <li>Descreva a refeição com <b>quantidades</b> (g, ml, unidades) e/ou envie uma <b>foto</b>.</li>
-            <li>Informe a <b>glicemia</b> (ou deixe o Nightscout preencher).</li>
-            <li>O app calcula:
-              <ul>
-                <li><b>Ultra-rápida</b>: carbo + correção.</li>
-                <li><b>Regular</b> (se “Regular agora”): parte de P+G convertida.</li>
-              </ul>
-            </li>
-            <li>Os <b>Detalhes</b> trazem a tabela de alimentos e os números utilizados.</li>
-          </ul>
-
-          <h3>Exemplo rápido de cálculo</h3>
-          <p>ICR=10, ISF=50, Alvo=100. Refeição 70 g CHO; Glicemia 180. P+G→Regular agora com 20 g CHO eq.</p>
-          <ul>
-            <li>Dose carbo = 70/10 = 7 U (ultra-rápida)</li>
-            <li>Dose correção = max(0,(180−100)/50)=1.6 ≈ 2 U (ultra-rápida)</li>
-            <li>Dose P+G = 20/10 = 2 U (Regular)</li>
-            <li><b>Total agora:</b> 9 U ultra-rápida + 2 U Regular</li>
-          </ul>
-
-          <h3>Segurança</h3>
-          <p>Ferramenta de apoio — valide seus parâmetros com sua equipe de saúde. Evite usar em situações de emergência.</p>
-
-          <h3>Contato</h3>
-          <p><b>upbotsweb@gmail.com</b> · Feito por <b>Upbots</b>.</p>
+          <p>O GlicoCerto calcula doses a partir da sua <b>Anamnese</b> (configurações do paciente) e da <b>Refeição</b> informada no <b>Chat</b> (texto e/ou foto) com a <b>Glicemia</b> atual. O <b>Histórico</b> lista e permite filtrar/excluir registros.</p>
+          <p><b>Contato</b>: upbotsweb@gmail.com</p>
         </div>
       </section>
 
@@ -412,22 +334,7 @@
       <section id="termos" class="card" style="display:none">
         <h2 style="margin-top:0">Termos de Utilização & Privacidade (LGPD)</h2>
         <div class="details-clean">
-          <h3>1. Finalidade do tratamento</h3>
-          <p>Usamos seus dados (anamnese, glicemia, refeições, Nightscout) para calcular doses, exibir recomendações e manter seu histórico pessoal.</p>
-          <h3>2. Bases legais</h3>
-          <ul><li>Execução do serviço</li><li>Legítimo interesse</li><li>Consentimento (integrações opcionais)</li></ul>
-          <h3>3. Compartilhamento</h3>
-          <p>Sem marketing de terceiros. Fornecedores técnicos tratam dados sob contrato e segurança adequada.</p>
-          <h3>4. Retenção e exclusão</h3>
-          <p>Enquanto a conta estiver ativa ou necessário às finalidades. Você pode solicitar exclusão.</p>
-          <h3>5. Segurança</h3>
-          <p>Controles técnicos/organizacionais; nenhum sistema é 100% seguro.</p>
-          <h3>6. Direitos do titular</h3>
-          <ul><li>Acesso, correção, portabilidade e exclusão</li><li>Revogação de consentimento</li><li>Reclamação à ANPD</li></ul>
-          <h3>7. Contato do controlador</h3>
-          <p><b>upbotsweb@gmail.com</b> · Feito por <b>Upbots</b>.</p>
-          <h3>8. Alterações</h3>
-          <p>Publicaremos atualizações nesta página.</p>
+          <p>Este aplicativo não substitui orientação médica.</p>
         </div>
       </section>
     </div>
@@ -439,8 +346,9 @@
     <button data-tab="historico" id="bnHistorico"><span class="icon">📈</span><span>Histórico</span></button>
   </nav>
 
+  <!-- ====== JS Principal ====== -->
   <script>
-    /* ===== Tema (ícone único) ===== */
+    /* ===== Tema ===== */
     const THEME_KEY='gc_theme_pref';
     const root=document.documentElement;
     const themeBtn=document.getElementById('themeBtn');
@@ -449,7 +357,23 @@
     themeBtn.addEventListener('click', ()=>{ const cur=root.getAttribute('data-theme')||'light'; setTheme(cur==='dark' ? 'light' : 'dark'); });
     loadTheme();
 
-    /* ===== Supabase/Auth & App ===== */
+    /* ===== PWA: SW + botão Instalar ===== */
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/glicocerto/sw.js', { scope: '/glicocerto/' });
+      });
+    }
+    let deferredPrompt = null;
+    const btnInstall = document.getElementById('btnInstall');
+    function isStandalone(){ return window.matchMedia('(display-mode: standalone)').matches || (window.navigator.standalone===true); }
+    function showInstallBtn(){ if(btnInstall) btnInstall.style.display='inline-block'; }
+    function hideInstallBtn(){ if(btnInstall) btnInstall.style.display='none'; }
+    if (isStandalone()) hideInstallBtn();
+    window.addEventListener('beforeinstallprompt', (e)=>{ e.preventDefault(); deferredPrompt=e; showInstallBtn(); });
+    btnInstall?.addEventListener('click', async()=>{ if(!deferredPrompt) return; hideInstallBtn(); deferredPrompt.prompt(); try{ await deferredPrompt.userChoice; }catch{} deferredPrompt=null; });
+    window.addEventListener('appinstalled', ()=>{ deferredPrompt=null; hideInstallBtn(); });
+
+    /* ===== Supabase/Auth ===== */
     let SUPABASE=null, USER_ID=null;
     const btnLogin=document.getElementById('btnLogin');
     const btnLoginGate=document.getElementById('btnLoginGate');
@@ -476,7 +400,6 @@
     function initialsFromName(name,email){ const n=(name||'').trim(); if(n){ const parts=n.split(/\s+/).slice(0,2); return parts.map(s=>s[0]||'').join('').toUpperCase(); } const e=(email||'').trim(); return e?e[0].toUpperCase():'?'; }
     function getAvatarUrl(u){ const md=u?.user_metadata||{}; const id0=u?.identities?.[0]?.identity_data||{}; return md.avatar_url||md.picture||id0.avatar_url||id0.picture||null; }
 
-    /* ===== Menu do usuário ===== */
     const menuBtn=document.getElementById('menuBtn');
     const userMenu=document.getElementById('userMenu');
     document.addEventListener('click',(ev)=>{
@@ -523,7 +446,6 @@
 
     async function getAuthHeaders(){ const {data:{session}}=await SUPABASE.auth.getSession(); const t=session?.access_token; return t?{Authorization:`Bearer ${t}`}:{ }; }
 
-    /* ===== Tabs ===== */
     function showTab(target){
       const sections={ paciente:document.getElementById('paciente'), chat:document.getElementById('chat'), historico:document.getElementById('historico'), ajuda:document.getElementById('ajuda'), termos:document.getElementById('termos') };
       Object.values(sections).forEach(el=>el && (el.style.display='none'));
@@ -541,13 +463,28 @@
     document.querySelectorAll('.tab-btn').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
     document.getElementById('bottomNav')?.addEventListener('click',(ev)=>{ const btn=ev.target.closest('button[data-tab]'); if(!btn) return; showTab(btn.dataset.tab); });
 
-    /* ===== Foto ===== */
+    /* ===== Foto: preview / limpar ===== */
     function fileToDataURL(file){ return new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=rej; fr.readAsDataURL(file); }); }
+    async function downscaleToDataURL(file, maxW=1024, maxH=1024, mime='image/jpeg', quality=0.7){
+      const img = await new Promise((res, rej) => {
+        const fr = new FileReader();
+        fr.onload = () => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = fr.result; };
+        fr.onerror = rej; fr.readAsDataURL(file);
+      });
+      let {width:w, height:h} = img;
+      const scale = Math.min(1, maxW / w, maxH / h);
+      const W = Math.max(1, Math.round(w * scale));
+      const H = Math.max(1, Math.round(h * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = W; canvas.height = H;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, W, H);
+      return canvas.toDataURL(mime, quality);
+    }
     const inpFoto=document.getElementById('foto'); const prev=document.getElementById('previewFoto'); const btnLimparFoto=document.getElementById('btnLimparFoto');
     inpFoto?.addEventListener('change',()=>{ const f=inpFoto.files?.[0]; if(!f){ prev.style.display='none'; btnLimparFoto.style.display='none'; validarCampos(); return;} const url=URL.createObjectURL(f); prev.src=url; prev.style.display='inline-block'; btnLimparFoto.style.display='inline-block'; validarCampos(); });
     btnLimparFoto?.addEventListener('click',()=>{ if(inpFoto) inpFoto.value=''; if(prev){ prev.src=''; prev.style.display='none'; } if(btnLimparFoto) btnLimparFoto.style.display='none'; validarCampos(); });
 
-    /* ===== Validação ===== */
     const validNum=(v)=> v!=='' && isFinite(Number(v));
     function validarCampos(){
       const txt=(document.getElementById('mensagem')?.value.trim()||'');
@@ -561,55 +498,169 @@
       const err=document.getElementById('glicErr'); if(err) err.style.display=(!gNum && gVal!=='')?'block':'none';
     }
     document.addEventListener('input',(ev)=>{ if(['mensagem','glicemia','foto','tipo_refeicao','nightscout_api_secret'].includes(ev.target?.id)) validarCampos(); });
-
-    /* ===== Toggle API_SECRET eye ===== */
-    document.getElementById('toggleSecret')?.addEventListener('click',()=>{
-      const i=document.getElementById('nightscout_api_secret');
-      if(!i) return;
-      i.type = i.type === 'password' ? 'text' : 'password';
-    });
+    document.getElementById('toggleSecret')?.addEventListener('click',()=>{ const i=document.getElementById('nightscout_api_secret'); if(!i) return; i.type = i.type === 'password' ? 'text' : 'password'; });
 
     /* ===== Paciente ===== */
     async function carregarPaciente(){ if(!USER_ID) return null; try{ const h=await getAuthHeaders(); const r=await fetch(`/api/paciente/${encodeURIComponent(USER_ID)}`,{headers:{...h}}); const j=await r.json(); if(!j.ok) return null; const d=j.data||null; if(d){ const set=(k,v)=>{ const el=document.getElementById(k); if(el) el.value=v??''; }; ['nome','sexo','idade','altura','insulina_basal','dose_diaria','insulina_rapida','icr','isf','target','pct_cal_pf','hipo','hiper','pg_strategy','nightscout_url','nightscout_api_secret'].forEach(k=>set(k,d[k])); mostrarNotaPG(); } return d; }catch{ return null; } }
     function mostrarNotaPG(){ const note=document.getElementById('pgNote'); const strat=document.getElementById('pg_strategy').value||'regular_now'; if(strat==='rapid_later'){ note.style.display='block'; note.textContent='Estratégia: NÃO aplicar agora a dose referente a proteína+gordura. A orientação aparecerá nos detalhes.'; } else { note.style.display='none'; note.textContent=''; } }
     document.getElementById('btnSalvar').onclick=async()=>{ if(!USER_ID){ alert('Faça login para salvar suas configurações.'); return; } const status=document.getElementById('statusSalvar'); status.textContent='Salvando...'; const num=(id)=>{ const v=document.getElementById(id).value.trim().replace(',', '.'); return v===''?null:Number(v); }; const txt=(id)=>{ const v=document.getElementById(id).value.trim(); return v===''?null:v; }; const payload={ userId:USER_ID, settings:{ nome:txt('nome'), sexo:txt('sexo'), idade:num('idade'), altura:num('altura'), insulina_basal:txt('insulina_basal'), dose_diaria:num('dose_diaria'), hipo:num('hipo'), hiper:num('hiper'), insulina_rapida:txt('insulina_rapida')||'Fiasp', icr:num('icr'), isf:num('isf'), target:num('target'), pct_cal_pf:num('pct_cal_pf')??100, pg_strategy:document.getElementById('pg_strategy').value||'regular_now', nightscout_url:txt('nightscout_url'), nightscout_api_secret:txt('nightscout_api_secret') } }; try{ const h=await getAuthHeaders(); const r=await fetch('/api/paciente',{method:'POST', headers:{'Content-Type':'application/json', ...h}, body:JSON.stringify(payload)}); const j=await r.json(); status.textContent=j.ok?'Configurações salvas com sucesso.':'Falha ao salvar.'; status.className=j.ok?'ok':'err'; if(j.ok) refreshNSBadge(); }catch{ status.textContent='Erro de rede ao salvar.'; status.className='err'; } };
-    
-    /* ===== compactando imagem ==== */
-    async function downscaleToDataURL(file, maxW=1024, maxH=1024, mime='image/jpeg', quality=0.7){
-      const img = await new Promise((res, rej) => {
-        const fr = new FileReader();
-        fr.onload = () => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = fr.result; };
-        fr.onerror = rej;
-        fr.readAsDataURL(file);
+
+    /* ===== Sanitização e tópicos (detalhes técnicos) ===== */
+    function sanitizeModelHtml(raw) {
+      if (!raw) return '';
+      let s = String(raw);
+      s = s.replace(/```html|```/g, '');
+      s = s.replace(/<pre[\s\S]*?<\/pre>/gi, '');
+      s = s.replace(/\{\s*"carbo_g"[\s\S]*?\}\s*$/i, '');
+      return s.trim();
+    }
+    function buildDetalhesTopicos({descricao, carbo_g, pg_cho_eq, glicemia, icr, isf, alvo, insRapida, strat}) {
+      const totCHO = Number(carbo_g || 0);
+      const totPG  = Number(pg_cho_eq || 0);
+      const doseCho = totCHO / icr;
+      const doseCor = Math.max(0, (glicemia - alvo) / isf);
+      const dosePg  = strat === 'regular_now' ? (totPG / icr) : 0;
+      const arred = (n)=> Math.round(Number(n||0));
+      const doseCho_i = arred(doseCho);
+      const doseCor_i = arred(doseCor);
+      const dosePg_i  = arred(dosePg);
+      const totalRapida_i = arred(doseCho + doseCor);
+
+      let html = '';
+      html += `<div class="details-clean">`;
+      html += `<h3 style="margin:.2rem 0 .4rem">Refeição informada</h3>`;
+      html += `<p style="margin:.2rem 0 .8rem">${descricao || '-'}</p>`;
+      html += `<h3 style="margin:.2rem 0 .4rem">📊 Totais</h3>`;
+      html += `<ul style="margin:.2rem 0 .8rem; padding-left:18px;">
+        <li>Carboidratos estimados: <b>${totCHO.toFixed(0)} g</b></li>
+        <li>Proteína+gordura (CHO equivalente): <b>${totPG.toFixed(0)} g</b></li>
+      </ul>`;
+      html += `<h3 style="margin:.2rem 0 .4rem">💉 Insulina</h3>`;
+      const linhas = [];
+      if (doseCor_i > 0) {
+        linhas.push(`Correção: (${glicemia} - ${alvo}) / ${isf} = ${doseCor.toFixed(2)} ⇒ <b>${doseCor_i}U</b>`);
+      }
+      linhas.push(`${insRapida.toUpperCase()} (carboidrato): ${totCHO} ÷ ${icr} = ${doseCho.toFixed(2)}U ⇒ <b>${doseCho_i}U</b>${doseCor_i>0?` + Correção(${doseCor_i}U) = <b>${totalRapida_i}U</b>`:''}`);
+      if (strat === 'regular_now') {
+        linhas.push(`Insulina Regular (proteína/gordura): ${totPG} ÷ ${icr} = ${dosePg.toFixed(2)}U ⇒ <b>${dosePg_i}U</b>`);
+        linhas.push(`<b>Total bolus</b>: ${totalRapida_i}U ${insRapida.toUpperCase()} + ${dosePg_i}U Regular = <b>${totalRapida_i + dosePg_i}U</b>`);
+      } else {
+        linhas.push(`Proteína/gordura: <b>não aplicar agora</b> (estratégia “rapid_later”).`);
+        linhas.push(`<b>Total imediato</b>: ${totalRapida_i}U ${insRapida.toUpperCase()}`);
+      }
+      html += `<ul style="margin:.2rem 0 .8rem; padding-left:18px;"><li>${linhas.join('</li><li>')}</li></ul>`;
+      html += `</div>`;
+      return html;
+    }
+    async function processarResposta(d) {
+      const detalhesBox = document.getElementById('detalhesBox');
+      const detalhesHTML = document.getElementById('detalhesHTML');
+      const resumo = document.getElementById('resumo');
+
+      // resumo principal (texto grande)
+      const ins = (d.config?.insulina_rapida || 'Humalog').toUpperCase();
+      const glic = Number(d.input?.glicemia||0);
+      const desc = (d.input?.descricao||'').replace(/\s+/g,' ').trim();
+      const t = d.totais || {};
+      const cfg = d.config || {};
+      const icr = Number(cfg.insulina_cho || 10);
+      const isf = Number(cfg.glicose_insulina || 50);
+      const alvo= Number(cfg.target || 100);
+      const strat = String(cfg.pg_strategy || 'regular_now');
+
+      // cálculo resumido para a primeira caixa
+      const doseCho = (Number(t.carbo_g||0))/icr;
+      const doseCor = Math.max(0,(glic-alvo)/isf);
+      const dosePg  = strat==='regular_now' ? (Number(t.pg_cho_equiv_g||0))/icr : 0;
+      const rint=(n)=>Math.round(Number(n||0));
+      const choU=rint(doseCho), corU=rint(doseCor), pgU=rint(dosePg), totalFiasp=rint(doseCho+doseCor);
+
+      let linhas=[];
+      linhas.push(`<strong>Para a refeição “${desc}” (glicemia: ${glic} mg/dL):</strong>`);
+      linhas.push(`• ${choU}U + ${corU}U de ${ins} para carboidratos e correção`);
+      if(strat==='regular_now'){
+        linhas.push(`• ${pgU}U de Insulina Regular (R) para proteína e gordura.`);
+        linhas.push(`• Total: ${totalFiasp}U ${ins} ; ${pgU}U Regular`);
+      } else {
+        linhas.push(`• Proteína/gordura: não aplicar agora; ver detalhes.`);
+        linhas.push(`• Total imediato: ${totalFiasp}U ${ins}`);
+      }
+      resumo.innerHTML = linhas.join('\n');
+
+      // sanitiza html da IA
+      const raw = d.detalhes_html || '';
+      const clean = sanitizeModelHtml(raw);
+
+      // tópicos oficializados
+      const topicosHTML = buildDetalhesTopicos({
+        descricao: desc,
+        carbo_g: Number(t.carbo_g || 0),
+        pg_cho_eq: Number(t.pg_cho_equiv_g || 0),
+        glicemia: glic,
+        icr, isf, alvo,
+        insRapida: ins,
+        strat
       });
-      let {width:w, height:h} = img;
-      const scale = Math.min(1, maxW / w, maxH / h);
-      const W = Math.max(1, Math.round(w * scale));
-      const H = Math.max(1, Math.round(h * scale));
-      const canvas = document.createElement('canvas');
-      canvas.width = W; canvas.height = H;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, W, H);
-      return canvas.toDataURL(mime, quality);
+
+      // monta tabela (se existir) + tópicos
+      const tmp = document.createElement('div');
+      tmp.innerHTML = clean;
+      const tbl = tmp.querySelector('table');
+      detalhesHTML.innerHTML='';
+
+      if(tbl){
+        const wrap = document.createElement('div');
+        wrap.className='table-wrap';
+        wrap.appendChild(tbl);
+        detalhesHTML.appendChild(wrap);
+      }
+      detalhesHTML.insertAdjacentHTML('beforeend', topicosHTML);
+
+      detalhesBox.style.display='block'; detalhesBox.open=false;
     }
 
-    /* ===== Chat ===== */
-    document.getElementById('btnEnviar').onclick=async()=>{ 
-      if(!USER_ID){ alert('Faça login para enviar.'); return; } 
-          const resumo=document.getElementById('resumo'); 
-          const detalhesBox=document.getElementById('detalhesBox'); 
-          const detalhesHTML=document.getElementById('detalhesHTML'); 
-          const mensagem=document.getElementById('mensagem').value.trim(); 
-          const glicemia=Number(document.getElementById('glicemia').value); 
-          const tipo=document.getElementById('tipo_refeicao').value||'outro'; 
-          const strat=document.getElementById('pg_strategy').value; resumo.textContent='Calculando...'; detalhesBox.style.display='none'; detalhesHTML.innerHTML=''; try{ const h=await getAuthHeaders(); const temFoto=!!(document.getElementById('foto')?.files?.length); let payload={ userId:USER_ID, glicemia, pg_strategy:strat, tipo }; let url='/api/chat'; if(temFoto){ const f=document.getElementById('foto').files[0]; const dataUrl=await downscaleToDataURL(f, 1024, 1024, 'image/jpeg', 0.7); url='/api/chat-image'; payload.image_data_url=dataUrl; if(mensagem) payload.message=mensagem; } else { payload.message=mensagem; } const r=await fetch(url,{method:'POST', headers:{'Content-Type':'application/json', ...h}, body:JSON.stringify(payload)}); const d=await r.json(); if(!d.ok){ resumo.textContent='Erro: '+(d.error||'Falha no cálculo.'); return; } const t=d.totais||{}; const cho_total=Number(t.carbo_g||0); const pg_cho_eq=Number(t.pg_cho_equiv_g||0); const icr=Number(d.config?.insulina_cho||10); const isf=Number(d.config?.glicose_insulina||50); const alvo=Number(d.config?.target||100); const glicVal=Number(d.input?.glicemia ?? glicemia); const stratUsed=(d.config?.pg_strategy||'regular_now'); const doseCho=cho_total/icr; const doseCor=Math.max(0,(glicVal-alvo)/isf); const dosePg=(stratUsed==='regular_now')?(pg_cho_eq/icr):0; const rint=(n)=>Math.round(Number(n||0)); const choU_i=rint(doseCho); const corU_i=rint(doseCor); const pgU_i=rint(dosePg); const totalFiasp_i=rint(doseCho+doseCor); const insRapida=(d.config?.insulina_rapida||'Fiasp').trim(); const refeicaoTxt=(d.input?.descricao||mensagem||'[foto]').replace(/\s+/g,' ').trim(); let linhas=[]; linhas.push(`Para a refeição “${refeicaoTxt}” (glicemia: ${glicVal} mg/dL):`); linhas.push(`• ${choU_i}U + ${corU_i}U de ${insRapida.toUpperCase()} para carboidratos e correção`); if(stratUsed==='regular_now'){ linhas.push(`• ${pgU_i}U de Insulina Regular (R) para proteína e gordura.`); linhas.push(`• Total: ${totalFiasp_i}U ${insRapida.toUpperCase()} ; ${pgU_i}U Regular`); } else { linhas.push(`• Proteína e gordura: não aplicar agora; ver detalhes.`); linhas.push(`• Total imediato: ${totalFiasp_i}U ${insRapida.toUpperCase()}`); } resumo.innerHTML = `<strong>${linhas.shift()}</strong>\n${linhas.join('\n')}`; 
-          const raw = d.detalhes_html || '';
-          const clean = raw.replace(/```html|```/g, '').replace(/<pre[\s\S]*?<\/pre>/gi, '').trim();
-          detalhesHTML.innerHTML= clean || '<em>Sem detalhes técnicos disponíveis.</em>';
-          detalhesBox.style.display='block'; detalhesBox.open=false; 
-        }catch(e){ console.error(e); resumo.textContent='Erro ao conectar com o servidor.'; } };
+    /* ===== Chat: enviar ===== */
+    document.getElementById('btnEnviar').onclick=async()=>{
+      if(!USER_ID){ alert('Faça login para enviar.'); return; }
+      const resumo=document.getElementById('resumo'); const detalhesBox=document.getElementById('detalhesBox'); const detalhesHTML=document.getElementById('detalhesHTML');
+      const mensagem=document.getElementById('mensagem').value.trim();
+      const glicemia=Number(document.getElementById('glicemia').value);
+      const tipo=document.getElementById('tipo_refeicao').value||'outro';
+      const strat=document.getElementById('pg_strategy').value;
 
-    /* ===== Nightscout no topo (badge) + auto-preencher chat ===== */
+      resumo.textContent='Calculando...'; detalhesBox.style.display='none'; detalhesHTML.innerHTML='';
+      try{
+        const h=await getAuthHeaders(); const temFoto=!!(document.getElementById('foto')?.files?.length);
+        let payload={ userId:USER_ID, glicemia, pg_strategy:strat, tipo }; let url='/api/chat';
+
+        if(temFoto){
+          const f=document.getElementById('foto').files[0];
+          const dataUrl=await downscaleToDataURL(f, 1024, 1024, 'image/jpeg', 0.7);  // <<< compressão aqui
+          url='/api/chat-image';
+          payload.image_data_url=dataUrl;
+          if(mensagem) payload.message=mensagem;
+        } else {
+          payload.message=mensagem;
+        }
+
+        const r=await fetch(url,{method:'POST', headers:{'Content-Type':'application/json', ...h}, body:JSON.stringify(payload)});
+        const d=await r.json();
+        if(!d.ok){ resumo.textContent='Erro: '+(d.error||'Falha no cálculo.'); return; }
+        await processarResposta(d);
+      }catch(e){ console.error(e); resumo.textContent='Erro ao conectar com o servidor.'; }
+    };
+
+    document.getElementById('btnNovo')?.addEventListener('click', () => {
+      const msg=document.getElementById('mensagem'); if(msg) msg.value='';
+      const f=document.getElementById('foto'); const p=document.getElementById('previewFoto'); const rm=document.getElementById('btnLimparFoto');
+      if(f) f.value=''; if(p){ p.src=''; p.style.display='none'; } if(rm) rm.style.display='none';
+      document.getElementById('tipo_refeicao').value='outro';
+      const resumo=document.getElementById('resumo'); const detalhesBox=document.getElementById('detalhesBox'); const detalhesHTML=document.getElementById('detalhesHTML');
+      if(resumo) resumo.textContent='Aguardando…'; if(detalhesHTML) detalhesHTML.innerHTML=''; if(detalhesBox){ detalhesBox.style.display='none'; detalhesBox.open=false; }
+      refreshNSBadge(); validarCampos();
+    });
+
+    /* ===== Nightscout badge ===== */
     const NS_REFRESH_MS=240000; let nsHeaderTimer=null;
     function hideNsBadge(){ nsBadge.style.display='none'; nsBadgeVal.textContent='--'; document.getElementById('glicemiaSource').textContent='(digite manualmente)'; const gi=document.getElementById('glicemia'); gi.readOnly=false; }
     async function refreshNSBadge(){
@@ -634,17 +685,6 @@
     function stopNsHeaderTimer(){ if(nsHeaderTimer){ clearInterval(nsHeaderTimer); nsHeaderTimer=null; } }
     document.addEventListener('visibilitychange',()=>{ if(document.hidden) stopNsHeaderTimer(); else if(USER_ID) startNsHeaderTimer(); });
 
-    /* Botão “Novo chat” */
-    document.getElementById('btnNovo')?.addEventListener('click', () => {
-      const msg=document.getElementById('mensagem'); if(msg) msg.value='';
-      const f=document.getElementById('foto'); const p=document.getElementById('previewFoto'); const rm=document.getElementById('btnLimparFoto');
-      if(f) f.value=''; if(p){ p.src=''; p.style.display='none'; } if(rm) rm.style.display='none';
-      document.getElementById('tipo_refeicao').value='outro';
-      const resumo=document.getElementById('resumo'); const detalhesBox=document.getElementById('detalhesBox'); const detalhesHTML=document.getElementById('detalhesHTML');
-      if(resumo) resumo.textContent='Aguardando…'; if(detalhesHTML) detalhesHTML.innerHTML=''; if(detalhesBox){ detalhesBox.style.display='none'; detalhesBox.open=false; }
-      refreshNSBadge(); validarCampos();
-    });
-
     /* ===== Histórico ===== */
     function fmtData(iso){ try{ const dt=new Date(iso); return dt.toLocaleString(); }catch{ return iso; } }
     async function carregarHistorico(){
@@ -663,13 +703,8 @@
         if(!Array.isArray(j.data)||j.data.length===0){ tbody.innerHTML=`<tr><td colspan="10">Sem registros.</td></tr>`; return; }
         tbody.innerHTML='';
         j.data.forEach(row=>{
-          const desc=((row.descricao || '')
-            .replace(/^\[foto\]\s*/i,'')
-            .replace(/\s+/g,' ')
-            .slice(0,180));
-          const fotoCell=row.foto_url
-            ? `<a href="${row.foto_url}" target="_blank" rel="noopener"><img src="${row.foto_url}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid #eee" /></a>`
-            : '-';
+          const desc=((row.descricao || '').replace(/^\[foto\]\s*/i,'').replace(/\s+/g,' ').slice(0,180));
+          const fotoCell=row.foto_url ? `<a href="${row.foto_url}" target="_blank" rel="noopener"><img src="${row.foto_url}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid #eee" /></a>` : '-';
           const tr=document.createElement('tr');
           tr.innerHTML=`
             <td>${fmtData(row.data_hora)}</td>
@@ -686,7 +721,6 @@
         });
       }catch(e){ console.error(e); tbody.innerHTML=`<tr><td colspan="10">Erro ao carregar.</td></tr>`; }
     }
-
     document.addEventListener('click', async (ev) => {
       const t=ev.target;
       if(t?.classList?.contains('btn-del')){
@@ -695,52 +729,8 @@
       }
     });
 
+    // start
     initSupabase();
   </script>
-  <script>
-    // 1) Registrar o Service Worker
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/glicocerto/sw.js', { scope: '/glicocerto/' });
-      });
-    }
-
-    // 2) Lidar com o prompt de instalação (PWA)
-    let deferredPrompt = null;
-    const btnInstall = document.getElementById('btnInstall');
-
-    // Esconde o botão se já estiver instalado (desktop e iOS)
-    function isStandalone() {
-      return window.matchMedia('(display-mode: standalone)').matches
-            || (window.navigator.standalone === true);
-    }
-    function hideInstallBtn() { if (btnInstall) btnInstall.style.display = 'none'; }
-    function showInstallBtn() { if (btnInstall) btnInstall.style.display = 'inline-block'; }
-
-    if (isStandalone()) hideInstallBtn(); // já instalado
-
-    window.addEventListener('beforeinstallprompt', (e) => {
-      // Impede o auto-prompt e guarda o evento
-      e.preventDefault();
-      deferredPrompt = e;
-      showInstallBtn();
-    });
-
-    btnInstall?.addEventListener('click', async () => {
-      if (!deferredPrompt) return;
-      hideInstallBtn();                  // evita cliques repetidos
-      deferredPrompt.prompt();           // mostra o prompt nativo
-      try { await deferredPrompt.userChoice; } catch {}
-      deferredPrompt = null;             // descarta o evento (só pode usar 1x)
-    });
-
-    window.addEventListener('appinstalled', () => {
-      // Instalado com sucesso
-      deferredPrompt = null;
-      hideInstallBtn();
-    });
-  </script>
-
-
 </body>
 </html>
