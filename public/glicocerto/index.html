@@ -1,23 +1,19 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
+<!doctype html>
+<html lang="pt-br">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
-  <base href="/glicocerto/">
-  <link rel="manifest" href="/glicocerto/manifest.webmanifest">
-  <meta name="theme-color" content="#0b0b0b">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <link rel="apple-touch-icon" href="/glicocerto/icons/icon-192.png">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>GlicoCerto</title>
+  <link rel="manifest" href="/glicocerto/manifest.webmanifest">
+  <meta name="theme-color" content="#2aa775">
+  <link rel="icon" href="/glicocerto/icons/icon-192.png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/glicocerto/icons/icon-192.png">
 
   <style>
     :root { --brand:#2aa775; --brand-700:#248c62; --bg:#f6f6f6; --text:#1f2937; --muted:#6b7280; --card:#ffffff; --border:#e7e7e7; --thead:#f5f5f5; }
     :root[data-theme="dark"]{ --bg:#0b0b0c; --card:#111114; --text:#e5e7eb; --border:#25262b; --muted:#9ca3af; --thead:#141519; }
-
     :root{ --input-bg:#ffffff; --input-text:#111; --input-border:#dddddd; }
     :root[data-theme="dark"]{ --input-bg:#16171b; --input-text:#e5e7eb; --input-border:#2a2b31; }
-
     *{box-sizing:border-box}
     html, body { height:100%; }
     body { font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background: var(--bg); color: var(--text); margin:0; line-height:1.45; }
@@ -59,12 +55,10 @@
     }
     .dropdown button:hover{ background:var(--thead); }
 
-    main { width: 100%; margin: 0 auto; padding: 16px; padding-bottom: 90px; }
-
+    main { width:100%; margin:0 auto; padding:16px; padding-bottom: 90px; }
     .tabs { display:flex; gap:8px; margin:0 0 12px; padding:0 2px 4px; flex-wrap:wrap; }
     .tab-btn { border:1px solid var(--border); background:#fff; padding:10px 14px; cursor:pointer; border-radius:999px; min-height:40px; }
     .tab-btn.active { background: var(--brand); color:#fff; border-color: var(--brand); }
-
     .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow: 0 1px 2px rgba(0,0,0,.03); margin-bottom:12px; }
 
     .grid { display:grid; grid-template-columns: 1fr; gap:12px; }
@@ -87,28 +81,25 @@
     .btn { background: var(--brand); border:none; color:#fff; padding:12px 16px; border-radius:12px; cursor:pointer; min-height:44px; font-weight:600; }
     .btn:disabled { opacity:.6; cursor:not-allowed; }
     .btn:hover{ background: var(--brand-700); }
+    .btn-del { background:#e11d48; color:#fff; border:none; padding:8px 10px; border-radius:10px; cursor:pointer; min-height:40px; }
 
     .muted { color:var(--muted); font-size:12px; }
     .note{background:#fff3cd;border:1px solid #ffeeba;color:#856404;padding:10px;border-radius:10px;margin-top:10px;}
-    .resumo { white-space:pre-wrap; background:var(--card); color:var(--text); border:1px solid var(--border); border-radius:10px; padding:12px; margin-top:12px; word-break: break-word; }
+    .resumo { white-space:pre-wrap; background:var(--card); color:var(--text); border:1px solid var(--border); border-radius:10px; padding:12px; margin-top:12px; }
     .resumo strong{ font-weight:800 }
     .disclaimer { margin-top:10px; font-size:12px; color:#666; }
     details summary { cursor:pointer; user-select:none; }
     .ok{color:#1e7e34} .err{color:#b91c1c}
 
-    .table-wrap { max-width:100%; overflow:auto; -webkit-overflow-scrolling:touch; border:1px solid var(--border); border-radius:12px; }
+    .table-wrap { overflow:auto; -webkit-overflow-scrolling:touch; border:1px solid var(--border); border-radius:12px; }
     table { width:100%; border-collapse: collapse; min-width: 900px; background: var(--card); color: var(--text); }
     th, td { border-bottom:1px solid var(--border); padding:10px 8px; text-align:left; font-size:14px; vertical-align:top; }
     th { background: var(--thead); position: sticky; top:0; z-index:1; }
-    .btn-del { background:#e11d48; color:#fff; border:none; padding:8px 10px; border-radius:10px; cursor:pointer; min-height:40px; }
 
-    .details-clean { border:1px solid var(--border); border-radius:10px; padding:10px; background:var(--card); overflow:hidden; }
+    .details-clean { border:1px solid var(--border); border-radius:10px; padding:10px; background:var(--card); }
     .details-clean .gc-table{ width:100%; border-collapse:collapse; font-size:14px; }
     .details-clean .gc-table th, .details-clean .gc-table td{ border:1px solid var(--border); padding:6px 8px; text-align:left; }
     .details-clean .gc-table th{ background:var(--thead); }
-    .details-clean table { width:100%; table-layout: fixed; border-collapse: collapse; }
-    .details-clean th, .details-clean td { word-break: break-word; }
-    .details-clean pre { white-space: pre-wrap; overflow: auto; }
 
     .bottom-nav{ position:fixed; left:0; right:0; bottom:0; height:64px; background:var(--card); border-top:1px solid var(--border); display:none; align-items:center; justify-content:space-around; z-index:200; }
     .bottom-nav button{ background:none; border:none; font:inherit; color:var(--text); display:flex; flex-direction:column; align-items:center; gap:4px; padding:8px 12px; border-radius:12px; }
@@ -124,668 +115,497 @@
     html:not([data-theme="dark"]) input, html:not([data-theme="dark"]) select, html:not([data-theme="dark"]) textarea{ color-scheme: light; }
     html[data-theme="dark"] input, html[data-theme="dark"] select, html[data-theme="dark"] textarea{ color-scheme: dark; }
   </style>
-
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.55.0/dist/umd/supabase.js" defer></script>
 </head>
 <body>
-  <header>
-    <div class="left-brand"><span>💬</span><span>GlicoCerto</span></div>
-    <div class="auth-box">
-      <button id="btnInstall" class="menu-btn" style="display:none">Instalar</button>
-      <button id="themeBtn" class="theme-icon-btn" aria-label="Tema">☼</button>
-      <div id="nsBadge" class="ns-badge" title="Glicemia atual (Nightscout)">
-        <span class="dot"></span><span id="nsBadgeVal">--</span>
+
+<header>
+  <div class="left-brand">
+    <span>🍚</span> GlicoCerto
+    <span id="nsBadge" class="ns-badge">
+      <span class="dot"></span>
+      <span id="nsBadgeVal">--</span>
+    </span>
+  </div>
+  <div class="auth-box">
+    <button id="btnNovo" class="menu-btn">Novo</button>
+    <button id="btnLogout" class="menu-btn">Sair</button>
+  </div>
+</header>
+
+<main>
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="chat">Calcular</button>
+    <button class="tab-btn" data-tab="historico">Histórico</button>
+    <button class="tab-btn" data-tab="paciente">Paciente</button>
+  </div>
+
+  <!-- CHAT -->
+  <section id="chat" class="card">
+    <div class="grid">
+      <div>
+        <label>Descrição / Itens</label>
+        <textarea id="mensagem" placeholder="Ex.: 80g arroz, 50g feijão..."></textarea>
       </div>
-      <div class="user-chip" id="userChip" style="display:none">
-        <img id="userAvatar" class="avatar" alt="perfil" referrerpolicy="no-referrer" crossorigin="anonymous"
-             onerror="this.style.display='none';document.getElementById('userInitials').style.display='grid'">
-        <div id="userInitials" class="initials" style="display:none"></div>
-        <button class="menu-btn" id="menuBtn" title="Menu">☰</button>
-        <div class="dropdown" id="userMenu" role="menu" aria-label="Menu do usuário">
-          <div class="hd">Menu</div>
-          <button data-menu="ajuda">❓ Ajuda</button>
-          <button data-menu="termos">📜 Termos</button>
-          <button data-menu="sair">⎋ Sair</button>
-        </div>
+      <div>
+        <label>Glicemia (mg/dL) <span id="glicemiaSource" class="muted">(digite manualmente)</span></label>
+        <input id="glicemia" type="number" inputmode="numeric" placeholder="Ex.: 110" />
       </div>
-      <button class="menu-btn" id="btnLogin" style="display:none">Entrar</button>
+      <div>
+        <label>Tipo de refeição</label>
+        <select id="tipo_refeicao">
+          <option value="cafe">Café</option>
+          <option value="almoco">Almoço</option>
+          <option value="jantar">Jantar</option>
+          <option value="lanche">Lanche</option>
+          <option value="outro" selected>Outro</option>
+        </select>
+      </div>
+      <div>
+        <label>Estratégia proteína+gordura</label>
+        <select id="pg_strategy">
+          <option value="regular_now" selected>Regular agora</option>
+          <option value="rapid_later">Rápida mais tarde</option>
+        </select>
+      </div>
+
+      <div>
+        <label>Foto (opcional)</label>
+        <!-- sem capture p/ abrir galeria tbm; múltiplos navegadores -->
+        <input id="foto" type="file" accept="image/*" />
+        <img id="previewFoto" alt="preview" style="display:none; width:120px; height:120px; object-fit:cover; margin-top:8px; border:1px solid var(--border); border-radius:10px;">
+        <button id="btnLimparFoto" class="menu-btn" style="display:none; margin-top:6px;">Remover foto</button>
+      </div>
     </div>
-  </header>
 
-  <main>
-    <section id="gate" class="card" style="display:block; text-align:center; padding:28px;">
-      <h2 style="margin:0 0 6px">Bem-vindo ao GlicoCerto</h2>
-      <p style="margin:0 0 16px">Faça login para acessar seu perfil, configurações e histórico.</p>
-      <button class="menu-btn" id="btnLoginGate">Entrar</button>
-      <p class="muted" style="margin-top:12px;">Seu acesso é individual e seguro.</p>
-    </section>
-
-    <div id="app" style="display:none;">
-      <div class="tabs">
-        <button class="tab-btn active" data-tab="paciente">Paciente</button>
-        <button class="tab-btn" data-tab="chat">Chat</button>
-        <button class="tab-btn" data-tab="historico">Histórico</button>
-      </div>
-
-      <!-- Paciente -->
-      <section id="paciente" class="card">
-        <h2 style="margin-top:0">Configurações do Paciente (Anamnese)</h2>
-        <p class="muted">Preencha e clique em <b>Salvar</b>. Estes dados serão usados no cálculo das doses.</p>
-
-        <div class="grid">
-          <div><label>Nome</label><input id="nome" placeholder="Ex.: Leandro" /></div>
-          <div><label>Sexo</label>
-            <select id="sexo"><option value="">-- selecione --</option><option>Masculino</option><option>Feminino</option><option>Outro</option></select>
-          </div>
-          <div><label>Idade (anos)</label><input id="idade" type="number" inputmode="numeric" min="0" step="1" /></div>
-          <div><label>Altura (m)</label><input id="altura" type="number" inputmode="decimal" min="0" step="0.01" placeholder="1,80 → use ponto: 1.80"/></div>
-
-          <div><label>Insulina Basal</label><input id="insulina_basal" placeholder="Ex.: Tresiba, Lantus, NPH" /></div>
-          <div><label>Dose diária basal (U)</label><input id="dose_diaria" type="number" inputmode="numeric" min="0" step="0.5" /></div>
-
-          <div><label>Insulina Rápida (ultra-rápida)</label><input id="insulina_rapida" placeholder="Ex.: Fiasp, Humalog (Lispro), Novorapid (Aspart)" /></div>
-          <div><label>ICR – g de carbo por 1U <span class="muted">(insulina_cho)</span></label><input id="icr" type="number" inputmode="numeric" min="1" step="0.1" placeholder="Ex.: 10"/></div>
-
-          <div><label>ISF – mg/dL por 1U <span class="muted">(glicose_insulina)</span></label><input id="isf" type="number" inputmode="numeric" min="1" step="1" placeholder="Ex.: 50"/></div>
-          <div><label>Glicemia alvo (mg/dL) <span class="muted">(target)</span></label><input id="target" type="number" inputmode="numeric" min="60" step="1" placeholder="Ex.: 100"/></div>
-
-          <div><label>% calorias de proteína+gordura a considerar (0–100)</label><input id="pct_cal_pf" type="number" inputmode="numeric" min="0" max="100" step="1" value="100"/></div>
-          <div><label>Estratégia para Proteína+Gordura</label>
-            <select id="pg_strategy">
-              <option value="regular_now">Usar Insulina Regular (R) agora</option>
-              <option value="rapid_later">Não aplicar agora com rápida (orientar depois)</option>
-            </select>
-          </div>
-
-          <div><label>Valor de hipoglicemia (mg/dL)</label><input id="hipo" type="number" inputmode="numeric" min="40" step="1" placeholder="Ex.: 70"/></div>
-          <div><label>Valor de hiperglicemia (mg/dL)</label><input id="hiper" type="number" inputmode="numeric" min="120" step="1" placeholder="Ex.: 180"/></div>
-
-          <div><label>Nightscout URL</label><input id="nightscout_url" placeholder="Ex.: https://meu-ns.onrender.com" /></div>
-          <div>
-            <label>Nightscout API_SECRET (opcional)</label>
-            <div class="row" style="gap:6px;">
-              <input id="nightscout_api_secret" type="password" placeholder="Somente se seu NS exigir" />
-              <button id="toggleSecret" class="menu-btn" type="button" title="Mostrar/ocultar">👁️</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="row" style="margin-top:12px; gap:8px;">
-          <button class="btn" id="btnSalvar">Salvar</button>
-          <span id="statusSalvar" class="muted" style="min-height:24px"></span>
-        </div>
-      </section>
-
-      <!-- Chat -->
-      <section id="chat" class="card" style="display:none">
-        <h2 style="margin-top:0">Chat de Refeição</h2>
-
-        <div id="pgNote" class="note" style="display:none"></div>
-
-        <div class="grid col-1">
-          <div>
-            <label>Refeição (ex.: 80g arroz, 50g feijão, 1 ovo)</label>
-            <textarea id="mensagem" placeholder="Descreva com peso/medida e tipos" required></textarea>
-          </div>
-          <div>
-            <label>Foto da refeição (opcional)</label>
-            <div class="row">
-              <input type="file" id="foto" accept="image/*" capture="environment">
-              <img id="previewFoto" alt="" style="display:none; max-width:160px; border:1px solid #eee; border-radius:8px;">
-              <button class="menu-btn" id="btnLimparFoto" type="button" style="display:none">Remover foto</button>
-            </div>
-            <div class="muted">Você pode enviar só a foto, só o texto, ou ambos.</div>
-          </div>
-        </div>
-
-        <div class="grid">
-          <div>
-            <label>Tipo da refeição</label>
-            <select id="tipo_refeicao">
-              <option value="cafe">Café</option>
-              <option value="almoco">Almoço</option>
-              <option value="lanche">Lanche</option>
-              <option value="jantar">Jantar</option>
-              <option value="ceia">Ceia</option>
-              <option value="outro" selected>Outro</option>
-            </select>
-          </div>
-          <div>
-            <label>Glicemia atual (mg/dL) <span class="muted" id="glicemiaSource"></span></label>
-            <input id="glicemia" type="number" inputmode="numeric" step="1" placeholder="Ex.: 160" required/>
-            <div id="glicErr" class="muted" style="display:none;color:#b91c1c">Informe a glicemia (número válido).</div>
-          </div>
-        </div>
-
-        <div class="row" style="margin-top:10px; gap:8px;">
-          <button class="btn" id="btnEnviar" disabled>Enviar</button>
-          <button class="menu-btn" id="btnNovo" type="button" title="Novo chat">Novo</button>
-          <span class="muted">Usa as configurações salvas do paciente.</span>
-        </div>
-
-        <div id="resumo" class="resumo">Aguardando…</div>
-
-        <details id="detalhesBox" style="display:none">
-          <summary>ver detalhes técnicos</summary>
-          <div id="detalhesHTML" class="details-clean"></div>
-        </details>
-
-        <div class="disclaimer">⚠️ Este app não substitui orientação médica.</div>
-      </section>
-
-      <!-- Histórico -->
-      <section id="historico" class="card" style="display:none">
-        <h2 style="margin-top:0">Histórico de Refeições</h2>
-
-        <div class="grid-3">
-          <div><label>Início</label><input type="date" id="f_inicio"></div>
-          <div><label>Fim (inclusive)</label><input type="date" id="f_fim"></div>
-          <div><label>Tipo</label>
-            <select id="f_tipo">
-              <option value="todos" selected>Todos</option>
-              <option value="cafe">Café</option>
-              <option value="almoco">Almoço</option>
-              <option value="lanche">Lanche</option>
-              <option value="jantar">Jantar</option>
-              <option value="ceia">Ceia</option>
-              <option value="outro">Outro</option>
-            </select>
-          </div>
-          <div>
-            <button class="btn" id="btnFiltrar">Filtrar</button>
-          </div>
-        </div>
-        <div class="row" style="margin-top:10px; gap:8px;">
-          <button class="btn" id="btnHoje">Hoje</button>
-          <button class="btn" id="btnSemana">Últimos 7 dias</button>
-          <button class="btn" id="btnMes">Últimos 30 dias</button>
-        </div>
-        <div class="row">
-          <button class="btn" id="btnBaixar" style="margin-left:auto">Baixar (XLSX)</button>
-        </div>
-        <div class="table-wrap" style="margin-top:12px;">
-          <table id="tHistorico">
-            <thead>
-              <tr>
-                <th>Data</th><th>Refeição</th><th>Glicemia</th><th>Alimento (descrição)</th>
-                <th>Total CHO (g)</th><th>Total gordura+proteína (CHO eq g)</th>
-                <th>Total Insulina A (rápida)</th><th>Total Insulina B (Regular)</th>
-                <th>Foto</th><th>Ações</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-        <div class="muted" style="margin-top:6px;">A = insulina rápida (carbo + correção); B = Insulina Regular (proteína+gordura).</div>
-      </section>
-
-      <!-- Ajuda -->
-      <section id="ajuda" class="card" style="display:none">
-        <h2 style="margin-top:0">Ajuda (FAQ)</h2>
-        <div class="details-clean">
-          <p>O GlicoCerto calcula doses a partir da sua <b>Anamnese</b> (configurações do paciente) e da <b>Refeição</b> informada no <b>Chat</b> (texto e/ou foto) com a <b>Glicemia</b> atual. O <b>Histórico</b> lista e permite filtrar/excluir registros.</p>
-          <p><b>Contato</b>: upbotsweb@gmail.com</p>
-        </div>
-      </section>
-
-      <!-- Termos -->
-      <section id="termos" class="card" style="display:none">
-        <h2 style="margin-top:0">Termos de Utilização & Privacidade (LGPD)</h2>
-        <div class="details-clean">
-          <p>Este aplicativo não substitui orientação médica.</p>
-        </div>
-      </section>
+    <div class="row" style="margin-top:10px;">
+      <button class="btn" id="btnEnviar">Enviar</button>
     </div>
-  </main>
 
-  <nav class="bottom-nav" id="bottomNav" aria-label="Navegação principal">
-    <button data-tab="paciente" id="bnPaciente" class="active"><span class="icon">👤</span><span>Paciente</span></button>
-    <button data-tab="chat" id="bnChat"><span class="icon">💬</span><span>Chat</span></button>
-    <button data-tab="historico" id="bnHistorico"><span class="icon">📈</span><span>Histórico</span></button>
-  </nav>
+    <div id="resumo" class="resumo" style="margin-top:10px;">Aguardando…</div>
 
-  <script>
-    /* ===== Tema ===== */
-    const THEME_KEY='gc_theme_pref';
-    const root=document.documentElement;
-    const themeBtn=document.getElementById('themeBtn');
-    function setTheme(mode){ root.setAttribute('data-theme', mode); localStorage.setItem(THEME_KEY, mode); themeBtn.textContent = (mode==='dark') ? '☾' : '☼'; }
-    function loadTheme(){ const saved=localStorage.getItem(THEME_KEY)||'light'; setTheme(saved); }
-    themeBtn.addEventListener('click', ()=>{ const cur=root.getAttribute('data-theme')||'light'; setTheme(cur==='dark' ? 'light' : 'dark'); });
-    loadTheme();
+    <details id="detalhesBox" class="details-clean" style="display:none; margin-top:12px;">
+      <summary>ver detalhes técnicos</summary>
+      <div id="detalhesHTML" style="margin-top:8px;"></div>
+    </details>
 
-    /* ===== PWA: SW + botão Instalar ===== */
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/glicocerto/sw.js', { scope: '/glicocerto/' });
-      });
-    }
-    let deferredPrompt = null;
-    const btnInstall = document.getElementById('btnInstall');
-    function isStandalone(){ return window.matchMedia('(display-mode: standalone)').matches || (window.navigator.standalone===true); }
-    function showInstallBtn(){ if(btnInstall) btnInstall.style.display='inline-block'; }
-    function hideInstallBtn(){ if(btnInstall) btnInstall.style.display='none'; }
-    if (isStandalone()) hideInstallBtn();
-    window.addEventListener('beforeinstallprompt', (e)=>{ e.preventDefault(); deferredPrompt=e; showInstallBtn(); });
-    btnInstall?.addEventListener('click', async()=>{ if(!deferredPrompt) return; hideInstallBtn(); deferredPrompt.prompt(); try{ await deferredPrompt.userChoice; }catch{} deferredPrompt=null; });
-    window.addEventListener('appinstalled', ()=>{ deferredPrompt=null; hideInstallBtn(); });
+    <div class="disclaimer">⚠️ Este app não substitui orientação médica.</div>
+  </section>
 
-    /* ===== Supabase/Auth ===== */
-    let SUPABASE=null, USER_ID=null;
-    const btnLogin=document.getElementById('btnLogin');
-    const btnLoginGate=document.getElementById('btnLoginGate');
-    const userChip=document.getElementById('userChip');
-    const userAvatar=document.getElementById('userAvatar');
-    const userInitials=document.getElementById('userInitials');
-    const nsBadge=document.getElementById('nsBadge');
-    const nsBadgeVal=document.getElementById('nsBadgeVal');
+  <!-- HISTÓRICO -->
+  <section id="historico" class="card" style="display:none;">
+    <div class="row">
+      <div><label>Início</label><input type="date" id="f_inicio"></div>
+      <div><label>Fim</label><input type="date" id="f_fim"></div>
+      <div>
+        <label>Tipo</label>
+        <select id="f_tipo">
+          <option value="todos">Todos</option>
+          <option value="cafe">Café</option>
+          <option value="almoco">Almoço</option>
+          <option value="jantar">Jantar</option>
+          <option value="lanche">Lanche</option>
+          <option value="outro">Outro</option>
+        </select>
+      </div>
+    </div>
+    <div class="row" style="margin-top:8px; gap:6px;">
+      <button id="btnFiltrar" class="menu-btn">Filtrar</button>
+      <button id="btnHoje" class="menu-btn">Hoje</button>
+      <button id="btnSemana" class="menu-btn">Semana</button>
+      <button id="btnMes" class="menu-btn">Mês</button>
+      <button id="btnBaixar" class="menu-btn">Baixar XLSX (filtro)</button>
+    </div>
 
-    function parseHashSession(){ if(!location.hash||location.hash.length<2)return null; const p=new URLSearchParams(location.hash.substring(1)); const at=p.get('access_token'); const rt=p.get('refresh_token'); const ea=p.get('expires_at'); if(!at||!rt) return null; return {access_token:at, refresh_token:rt, expires_at: ea?Number(ea):undefined}; }
-    async function initSupabase(){
-      const r=await fetch('/api/env'); const j=await r.json(); if(!j.ok) return;
-      SUPABASE=window.supabase.createClient(j.supabaseUrl,j.supabaseAnonKey);
-      const frag=parseHashSession(); if(frag){ try{ await SUPABASE.auth.setSession(frag); history.replaceState(null,'',location.origin+location.pathname);}catch{} }
-      const {data:{session}}=await SUPABASE.auth.getSession(); await applySession(session);
-      SUPABASE.auth.onAuthStateChange(async(_e,ss)=>{ await applySession(ss); });
-    }
-    async function ensureSupabaseReady(){ if(!SUPABASE){ const r=await fetch('/api/env'); const j=await r.json(); if(j?.ok) SUPABASE=window.supabase.createClient(j.supabaseUrl,j.supabaseAnonKey);} if(!SUPABASE) throw new Error('SUPABASE não inicializou.'); }
-    async function startLogin(){ try{ await ensureSupabaseReady(); const r=await SUPABASE.auth.signInWithOAuth({provider:'google', options:{redirectTo:location.origin, flowType:'implicit', skipBrowserRedirect:true}}); if(r.error) throw r.error; if(r.data?.url) location.href=r.data.url; else await SUPABASE.auth.signInWithOAuth({provider:'google', options:{redirectTo:location.origin, flowType:'implicit'}});}catch(e){ alert('Não foi possível iniciar o login.'); console.error(e);} }
-    btnLogin.onclick=startLogin; btnLoginGate?.addEventListener('click',startLogin);
+    <div class="table-wrap" style="margin-top:12px;">
+      <table id="tHistorico">
+        <thead>
+          <tr>
+            <th>Data</th><th>Tipo</th><th>Glicemia</th><th>Descrição</th>
+            <th>CHO (g)</th><th>PG eq (g)</th><th>Rápida (U)</th><th>Regular (U)</th><th>Foto</th><th>Ações</th>
+          </tr>
+        </thead>
+        <tbody><tr><td colspan="10">Faça login…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
 
-    function show(el,flag){ if(el) el.style.display=flag?'inline-flex':'none'; }
-    function showBlock(el,flag){ if(el) el.style.display=flag?'block':'none'; }
-    function initialsFromName(name,email){ const n=(name||'').trim(); if(n){ const parts=n.split(/\s+/).slice(0,2); return parts.map(s=>s[0]||'').join('').toUpperCase(); } const e=(email||'').trim(); return e?e[0].toUpperCase():'?'; }
-    function getAvatarUrl(u){ const md=u?.user_metadata||{}; const id0=u?.identities?.[0]?.identity_data||{}; return md.avatar_url||md.picture||id0.avatar_url||id0.picture||null; }
+  <!-- PACIENTE -->
+  <section id="paciente" class="card" style="display:none;">
+    <p>Configurações do paciente (ICR, ISF, alvo, etc.).</p>
+  </section>
+</main>
 
-    const menuBtn=document.getElementById('menuBtn');
-    const userMenu=document.getElementById('userMenu');
-    document.addEventListener('click',(ev)=>{
-      const isBtn = ev.target.closest('#menuBtn');
-      const isMenu = ev.target.closest('#userMenu');
-      if(isBtn){ userMenu.classList.toggle('open'); return; }
-      if(!isMenu){ userMenu.classList.remove('open'); }
+<nav id="bottomNav" class="bottom-nav">
+  <button data-tab="chat"><span class="icon">💉</span><span>Calcular</span></button>
+  <button data-tab="historico"><span class="icon">📜</span><span>Histórico</span></button>
+  <button data-tab="paciente"><span class="icon">👤</span><span>Paciente</span></button>
+</nav>
+
+<!-- libs p/ XLSX -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
+
+<script type="module">
+  // ===== Supabase (mínimo) =====
+  const SUPABASE_URL = window.SUPABASE_URL || '';
+  const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || '';
+  const { createClient } = window.supabase || {};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+
+<script>
+  const SUPABASE = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  let USER_ID = null;
+
+  // ---------- Helpers ----------
+  function sanitizeModelHtml(raw){
+    return String(raw||'')
+      .replace(/```html|```/g,'')
+      .replace(/<pre[\s\S]*?<\/pre>/gi,'')
+      .trim();
+  }
+
+  // Reduz e converte arquivo de imagem para dataURL (para celular não travar)
+  function downscaleToDataURL(file, max=300, quality=0.85){
+    return new Promise((resolve, reject)=>{
+      const img = new Image();
+      const fr = new FileReader();
+      fr.onload = () => { img.src = fr.result; };
+      fr.onerror = reject;
+      img.onload = () => {
+        const { width:w, height:h } = img;
+        const scale = Math.min(1, max/Math.max(w,h));
+        const cw = Math.max(1, Math.round(w*scale));
+        const ch = Math.max(1, Math.round(h*scale));
+        const canvas = document.createElement('canvas');
+        canvas.width=cw; canvas.height=ch;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img,0,0,cw,ch);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+      fr.readAsDataURL(file);
     });
-    userMenu.addEventListener('click', (ev)=>{
-      const act = ev.target.closest('button')?.dataset?.menu;
-      if(!act) return;
-      userMenu.classList.remove('open');
-      if(act==='ajuda') showTab('ajuda');
-      if(act==='termos') showTab('termos');
-      if(act==='sair') doLogout();
-    });
+  }
 
-    async function applySession(session){
-      const gate=document.getElementById('gate'); const appWrap=document.getElementById('app');
-      if(session?.user){
-        const user=session.user; USER_ID=user.id;
-        const photo=getAvatarUrl(user);
-        if(photo){ userAvatar.src=photo; userAvatar.style.display='block'; userInitials.style.display='none'; }
-        else { userAvatar.style.display='none'; userInitials.style.display='grid'; userInitials.textContent=initialsFromName(user.user_metadata?.full_name,user.email); }
-        show(btnLogin,false); show(userChip,true); showBlock(gate,false); showBlock(appWrap,true);
-        const dados=await carregarPaciente(); showTab(dados ? 'chat':'paciente');
-        startNsHeaderTimer();
-      } else {
-        USER_ID=null; show(userChip,false); show(btnLogin,true); showBlock(gate,true); showBlock(appWrap,false); stopNsHeaderTimer(); hideNsBadge();
-      }
-      validarCampos();
-    }
+  function rint(n){ return Math.round(Number(n||0)); }
 
-    async function doLogout(){
-      if(!SUPABASE) return;
+  async function initSupabase(){
+    const { data:{ user } } = await SUPABASE.auth.getUser();
+    USER_ID = user?.id || null;
+    document.getElementById('btnLogout').onclick = async () => {
       await SUPABASE.auth.signOut();
       stopNsHeaderTimer(); hideNsBadge();
-      document.getElementById('mensagem').value=''; document.getElementById('glicemia').value='';
+      document.getElementById('mensagem').value='';
+      document.getElementById('glicemia').value='';
       document.querySelector('#tHistorico tbody')?.replaceChildren();
       const f=document.getElementById('foto'); if(f) f.value='';
       const p=document.getElementById('previewFoto'); if(p){ p.src=''; p.style.display='none'; }
       document.getElementById('glicemia').readOnly=false; document.getElementById('glicemiaSource').textContent='';
-    }
+    };
+    if (USER_ID) startNsHeaderTimer();
+  }
 
-    async function getAuthHeaders(){ const {data:{session}}=await SUPABASE.auth.getSession(); const t=session?.access_token; return t?{Authorization:`Bearer ${t}`}:{ }; }
+  async function getAuthHeaders(){
+    const {data:{session}}=await SUPABASE.auth.getSession();
+    const t=session?.access_token;
+    return t?{Authorization:`Bearer ${t}`}:{};
+  }
 
-    function showTab(target){
-      const sections={ paciente:document.getElementById('paciente'), chat:document.getElementById('chat'), historico:document.getElementById('historico'), ajuda:document.getElementById('ajuda'), termos:document.getElementById('termos') };
-      Object.values(sections).forEach(el=>el && (el.style.display='none'));
-      document.querySelectorAll('.tab-btn').forEach(t=>t.classList.remove('active'));
-      ['bnPaciente','bnChat','bnHistorico'].forEach(id=>document.getElementById(id)?.classList.remove('active'));
-      const t=target||'paciente';
-      if(sections[t]) sections[t].style.display='block';
-      const btn=[...document.querySelectorAll('.tab-btn')].find(b=>b.dataset.tab===t);
-      if(btn) btn.classList.add('active');
-      const bn=document.getElementById('bottomNav');
-      bn?.querySelectorAll('button').forEach(b=>{ if(b.dataset.tab===t) b.classList.add('active'); });
-      if(t==='historico') carregarHistorico();
-      window.scrollTo({top:0, behavior:'smooth'});
-    }
-    document.querySelectorAll('.tab-btn').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
-    document.getElementById('bottomNav')?.addEventListener('click',(ev)=>{ const btn=ev.target.closest('button[data-tab]'); if(!btn) return; showTab(btn.dataset.tab); });
+  // ===== Tabs =====
+  function showTab(target){
+    const sections={
+      paciente:document.getElementById('paciente'),
+      chat:document.getElementById('chat'),
+      historico:document.getElementById('historico')
+    };
+    Object.values(sections).forEach(el=>el && (el.style.display='none'));
+    document.querySelectorAll('.tab-btn').forEach(t=>t.classList.remove('active'));
+    ['bnPaciente','bnChat','bnHistorico'].forEach(id=>document.getElementById(id)?.classList.remove('active'));
+    const t=target||'chat';
+    if(sections[t]) sections[t].style.display='block';
+    const btn=[...document.querySelectorAll('.tab-btn')].find(b=>b.dataset.tab===t);
+    if(btn) btn.classList.add('active');
+    const bn=document.getElementById('bottomNav');
+    bn?.querySelectorAll('button').forEach(b=>{ if(b.dataset.tab===t) b.classList.add('active'); });
+    if(t==='historico') carregarHistorico();
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+  document.querySelectorAll('.tab-btn').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+  document.getElementById('bottomNav')?.addEventListener('click',(ev)=>{
+    const btn=ev.target.closest('button[data-tab]'); if(!btn) return; showTab(btn.dataset.tab);
+  });
 
-    /* ===== Foto: preview / limpar ===== */
-    function fileToDataURL(file){ return new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=rej; fr.readAsDataURL(file); }); }
-    async function downscaleToDataURL(file, maxW=1024, maxH=1024, mime='image/jpeg', quality=0.7){
-      const img = await new Promise((res, rej) => {
-        const fr = new FileReader();
-        fr.onload = () => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = fr.result; };
-        fr.onerror = rej; fr.readAsDataURL(file);
+  // ===== Foto =====
+  function fileToDataURL(file){ return new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=rej; fr.readAsDataURL(file); }); }
+  const inpFoto=document.getElementById('foto');
+  const prev=document.getElementById('previewFoto');
+  const btnLimparFoto=document.getElementById('btnLimparFoto');
+
+  inpFoto?.addEventListener('change', ()=>{
+    const f=inpFoto.files?.[0];
+    if(!f){ prev.style.display='none'; btnLimparFoto.style.display='none'; return; }
+    fileToDataURL(f).then(d=>{
+      prev.src=d; prev.style.display='block'; btnLimparFoto.style.display='inline-block';
+    });
+  });
+  btnLimparFoto?.addEventListener('click', ()=>{
+    inpFoto.value=''; prev.src=''; prev.style.display='none'; btnLimparFoto.style.display='none';
+  });
+
+  // ===== Nightscout badge + auto-preencher glicemia =====
+  const nsBadge=document.getElementById('nsBadge');
+  const nsBadgeVal=document.getElementById('nsBadgeVal');
+  const NS_REFRESH_MS=240000; let nsHeaderTimer=null;
+
+  function hideNsBadge(){
+    nsBadge.style.display='none'; nsBadgeVal.textContent='--';
+    document.getElementById('glicemiaSource').textContent='(digite manualmente)';
+    const gi=document.getElementById('glicemia'); gi.readOnly=false;
+  }
+  async function refreshNSBadge(){
+    if(!USER_ID) return hideNsBadge();
+    try{
+      const h=await getAuthHeaders();
+      const rCfg=await fetch(`/api/paciente/${encodeURIComponent(USER_ID)}`,{headers:{...h}});
+      const jCfg=await rCfg.json();
+      const urlNS=jCfg?.data?.nightscout_url?.trim();
+      if(!urlNS){ hideNsBadge(); return; }
+      const r=await fetch(`/api/ns/latest/${encodeURIComponent(USER_ID)}`,{headers:{...h}});
+      const j=await r.json();
+      if(!j.ok||!j.data){ hideNsBadge(); return; }
+      const mgdl=Number(j.data.mgdl);
+      nsBadgeVal.textContent = `${mgdl} mg/dL`;
+      nsBadge.style.display='inline-flex';
+      const chatVisivel=document.getElementById('chat')?.style.display!=='none';
+      const glicInp=document.getElementById("glicemia");
+      const src=document.getElementById("glicemiaSource");
+      if(glicInp){ glicInp.value=String(mgdl); glicInp.readOnly=true; if(src) src.textContent='(Nightscout)'; if(chatVisivel) validarCampos?.(); }
+    }catch(e){ console.warn('NS badge:',e); hideNsBadge(); }
+  }
+  function startNsHeaderTimer(){ stopNsHeaderTimer(); refreshNSBadge(); nsHeaderTimer=setInterval(refreshNSBadge, NS_REFRESH_MS); }
+  function stopNsHeaderTimer(){ if(nsHeaderTimer){ clearInterval(nsHeaderTimer); nsHeaderTimer=null; } }
+  document.addEventListener('visibilitychange',()=>{ if(document.hidden) stopNsHeaderTimer(); else if(USER_ID) startNsHeaderTimer(); });
+
+  // Botão “Novo”
+  document.getElementById('btnNovo')?.addEventListener('click', () => {
+    const msg=document.getElementById('mensagem'); if(msg) msg.value='';
+    const f=document.getElementById('foto'); const p=document.getElementById('previewFoto'); const rm=document.getElementById('btnLimparFoto');
+    if(f) f.value=''; if(p){ p.src=''; p.style.display='none'; } if(rm) rm.style.display='none';
+    document.getElementById('tipo_refeicao').value='outro';
+    const resumo=document.getElementById('resumo'); const detalhesBox=document.getElementById('detalhesBox'); const detalhesHTML=document.getElementById('detalhesHTML');
+    if(resumo) resumo.textContent='Aguardando…'; if(detalhesHTML) detalhesHTML.innerHTML=''; if(detalhesBox){ detalhesBox.style.display='none'; detalhesBox.open=false; }
+    refreshNSBadge();
+  });
+
+  // ===== Histórico =====
+  let HIST_CACHE=[];
+  function fmtData(iso){ try{ const dt=new Date(iso); return dt.toLocaleString(); }catch{ return iso; } }
+
+  async function carregarHistorico(){
+    if(!USER_ID) return;
+    const tbody=document.querySelector('#tHistorico tbody'); tbody.innerHTML='<tr><td colspan="10">Carregando…</td></tr>';
+    try{
+      const h=await getAuthHeaders();
+      const params=new URLSearchParams({ userId:USER_ID });
+      const ini=document.getElementById('f_inicio').value;
+      const fim=document.getElementById('f_fim').value;
+      const tipo=document.getElementById('f_tipo').value;
+      if(ini) params.set('start', new Date(ini+'T00:00:00').toISOString());
+      if(fim) params.set('end', new Date(fim+'T23:59:59.999').toISOString());
+      if(tipo && tipo!=='todos') params.set('tipo', tipo);
+
+      const r=await fetch('/api/refeicoes?'+params.toString(),{headers:{...h}});
+      const j=await r.json();
+      if(!j.ok){ tbody.innerHTML=`<tr><td colspan="10">${j.error||'Falha ao carregar.'}</td></tr>`; return; }
+
+      HIST_CACHE = Array.isArray(j.data) ? j.data : [];
+      if(HIST_CACHE.length===0){ tbody.innerHTML=`<tr><td colspan="10">Sem registros.</td></tr>`; return; }
+      tbody.innerHTML='';
+      HIST_CACHE.forEach(row=>{
+        const desc=((row.descricao||'').replace(/^\[foto\]\s*/i,'').replace(/\s+/g,' ').slice(0,180));
+        const fotoCell=row.foto_url ? `<a href="${row.foto_url}" target="_blank" rel="noopener"><img src="${row.foto_url}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid #eee" /></a>` : '-';
+        const tr=document.createElement('tr');
+        tr.innerHTML=`
+          <td>${fmtData(row.data_hora)}</td>
+          <td>${(row.tipo||'').toUpperCase()}</td>
+          <td>${row.glicemia ?? '-'}</td>
+          <td>${desc}</td>
+          <td>${Number(row.cho_total_g||0).toFixed(1)}</td>
+          <td>${Number(row.pg_cho_equiv_g||0).toFixed(1)}</td>
+          <td>${Number(row.dose_rapida_total||0).toFixed(1)}</td>
+          <td>${Number(row.dose_regular_pg||0).toFixed(1)}</td>
+          <td>${fotoCell}</td>
+          <td><button class="btn-del" title="Excluir" data-id="${row.id}">🗑️</button></td>`;
+        tbody.appendChild(tr);
       });
-      let {width:w, height:h} = img;
-      const scale = Math.min(1, maxW / w, maxH / h);
-      const W = Math.max(1, Math.round(w * scale));
-      const H = Math.max(1, Math.round(h * scale));
-      const canvas = document.createElement('canvas');
-      canvas.width = W; canvas.height = H;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, W, H);
-      return canvas.toDataURL(mime, quality);
+    }catch(e){ console.error(e); tbody.innerHTML=`<tr><td colspan="10">Erro ao carregar.</td></tr>`; }
+  }
+
+  function exportHistoricoXLSX(){
+    if(!Array.isArray(HIST_CACHE) || HIST_CACHE.length===0){
+      alert('Nada para exportar: aplique um filtro que retorne dados.');
+      return;
     }
-    const inpFoto=document.getElementById('foto'); const prev=document.getElementById('previewFoto'); const btnLimparFoto=document.getElementById('btnLimparFoto');
-    inpFoto?.addEventListener('change',()=>{ const f=inpFoto.files?.[0]; if(!f){ prev.style.display='none'; btnLimparFoto.style.display='none'; validarCampos(); return;} const url=URL.createObjectURL(f); prev.src=url; prev.style.display='inline-block'; btnLimparFoto.style.display='inline-block'; validarCampos(); });
-    btnLimparFoto?.addEventListener('click',()=>{ if(inpFoto) inpFoto.value=''; if(prev){ prev.src=''; prev.style.display='none'; } if(btnLimparFoto) btnLimparFoto.style.display='none'; validarCampos(); });
+    const rows = HIST_CACHE.map(r => ({
+      Data: new Date(r.data_hora).toLocaleString(),
+      Tipo: (r.tipo || '').toUpperCase(),
+      Glicemia_mg_dL: r.glicemia ?? '',
+      Descricao: (r.descricao || '').replace(/^\[foto\]\s*/i,''),
+      CHO_g: Number(r.cho_total_g || 0),
+      'Prot+Gord (CHO eq g)': Number(r.pg_cho_equiv_g || 0),
+      'Insulina A (rápida)': Number(r.dose_rapida_total || 0),
+      'Insulina B (Regular)': Number(r.dose_regular_pg || 0),
+      FotoURL: r.foto_url || ''
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = [{wch:19},{wch:8},{wch:12},{wch:50},{wch:8},{wch:16},{wch:16},{wch:18},{wch:28}];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Historico');
+    const ini = document.getElementById('f_inicio').value || '';
+    const fim = document.getElementById('f_fim').value || '';
+    const tipo = document.getElementById('f_tipo').value || 'todos';
+    const stamp = new Date().toISOString().slice(0,10);
+    const fname = `glicocerto_historico_${tipo}_${ini||'inicio'}_${fim||'fim'}_${stamp}.xlsx`;
+    XLSX.writeFile(wb, fname);
+  }
 
-    const validNum=(v)=> v!=='' && isFinite(Number(v));
-    function validarCampos(){
-      const txt=(document.getElementById('mensagem')?.value.trim()||'');
-      const temTexto=txt.length>0;
-      const temFoto=!!(document.getElementById('foto')?.files?.length);
-      const gVal=document.getElementById('glicemia')?.value.trim()??'';
-      const gNum=validNum(gVal);
-      const tipoOk=!!document.getElementById('tipo_refeicao')?.value;
-      const canSend=((temTexto||temFoto)&&gNum&&tipoOk&&!!USER_ID);
-      const btn=document.getElementById('btnEnviar'); if(btn) btn.disabled=!canSend;
-      const err=document.getElementById('glicErr'); if(err) err.style.display=(!gNum && gVal!=='')?'block':'none';
+  document.getElementById('btnFiltrar')?.addEventListener('click', carregarHistorico);
+  document.getElementById('btnHoje')?.addEventListener('click', ()=>{
+    const d=new Date(); const iso=d.toISOString().slice(0,10);
+    document.getElementById('f_inicio').value=iso;
+    document.getElementById('f_fim').value=iso;
+    carregarHistorico();
+  });
+  document.getElementById('btnSemana')?.addEventListener('click', ()=>{
+    const fim=new Date(); const ini=new Date(Date.now()-6*86400000);
+    document.getElementById('f_inicio').value=ini.toISOString().slice(0,10);
+    document.getElementById('f_fim').value=fim.toISOString().slice(0,10);
+    carregarHistorico();
+  });
+  document.getElementById('btnMes')?.addEventListener('click', ()=>{
+    const fim=new Date(); const ini=new Date(Date.now()-29*86400000);
+    document.getElementById('f_inicio').value=ini.toISOString().slice(0,10);
+    document.getElementById('f_fim').value=fim.toISOString().slice(0,10);
+    carregarHistorico();
+  });
+  document.getElementById('btnBaixar')?.addEventListener('click', exportHistoricoXLSX);
+
+  // Exclusão no histórico
+  document.addEventListener('click', async (ev) => {
+    const t=ev.target;
+    if(t?.classList?.contains('btn-del')){
+      const id=t.getAttribute('data-id'); if(!id||!confirm('Excluir este registro?')) return;
+      try{
+        const h=await getAuthHeaders();
+        const url=`/api/refeicoes/${encodeURIComponent(id)}?userId=${encodeURIComponent(USER_ID)}`;
+        const r=await fetch(url,{ method:'DELETE', headers:{...h} });
+        const j=await r.json();
+        if(!j.ok){ alert('Falha ao excluir: '+(j.error||'')); return; }
+        carregarHistorico();
+      }catch(e){ alert('Erro de rede ao excluir.'); }
     }
-    document.addEventListener('input',(ev)=>{ if(['mensagem','glicemia','foto','tipo_refeicao','nightscout_api_secret'].includes(ev.target?.id)) validarCampos(); });
-    document.getElementById('toggleSecret')?.addEventListener('click',()=>{ const i=document.getElementById('nightscout_api_secret'); if(!i) return; i.type = i.type === 'password' ? 'text' : 'password'; });
+  });
 
-    /* ===== Paciente ===== */
-    async function carregarPaciente(){ if(!USER_ID) return null; try{ const h=await getAuthHeaders(); const r=await fetch(`/api/paciente/${encodeURIComponent(USER_ID)}`,{headers:{...h}}); const j=await r.json(); if(!j.ok) return null; const d=j.data||null; if(d){ const set=(k,v)=>{ const el=document.getElementById(k); if(el) el.value=v??''; }; ['nome','sexo','idade','altura','insulina_basal','dose_diaria','insulina_rapida','icr','isf','target','pct_cal_pf','hipo','hiper','pg_strategy','nightscout_url','nightscout_api_secret'].forEach(k=>set(k,d[k])); mostrarNotaPG(); } return d; }catch{ return null; } }
-    function mostrarNotaPG(){ const note=document.getElementById('pgNote'); const strat=document.getElementById('pg_strategy').value||'regular_now'; if(strat==='rapid_later'){ note.style.display='block'; note.textContent='Estratégia: NÃO aplicar agora a dose referente a proteína+gordura. A orientação aparecerá nos detalhes.'; } else { note.style.display='none'; note.textContent=''; } }
-    document.getElementById('btnSalvar').onclick=async()=>{ if(!USER_ID){ alert('Faça login para salvar suas configurações.'); return; } const status=document.getElementById('statusSalvar'); status.textContent='Salvando...'; const num=(id)=>{ const v=document.getElementById(id).value.trim().replace(',', '.'); return v===''?null:Number(v); }; const txt=(id)=>{ const v=document.getElementById(id).value.trim(); return v===''?null:v; }; const payload={ userId:USER_ID, settings:{ nome:txt('nome'), sexo:txt('sexo'), idade:num('idade'), altura:num('altura'), insulina_basal:txt('insulina_basal'), dose_diaria:num('dose_diaria'), hipo:num('hipo'), hiper:num('hiper'), insulina_rapida:txt('insulina_rapida')||'Fiasp', icr:num('icr'), isf:num('isf'), target:num('target'), pct_cal_pf:num('pct_cal_pf')??100, pg_strategy:document.getElementById('pg_strategy').value||'regular_now', nightscout_url:txt('nightscout_url'), nightscout_api_secret:txt('nightscout_api_secret') } }; try{ const h=await getAuthHeaders(); const r=await fetch('/api/paciente',{method:'POST', headers:{'Content-Type':'application/json', ...h}, body:JSON.stringify(payload)}); const j=await r.json(); status.textContent=j.ok?'Configurações salvas com sucesso.':'Falha ao salvar.'; status.className=j.ok?'ok':'err'; if(j.ok) refreshNSBadge(); }catch{ status.textContent='Erro de rede ao salvar.'; status.className='err'; } };
+  // ===== Enviar =====
+  document.getElementById('btnEnviar').onclick = async () => {
+    if(!USER_ID){ alert('Faça login para enviar.'); return; }
+    const resumo=document.getElementById('resumo');
+    const detalhesBox=document.getElementById('detalhesBox');
+    const detalhesHTML=document.getElementById('detalhesHTML');
 
-    /* ===== Sanitização e tópicos (detalhes técnicos) ===== */
-    function sanitizeModelHtml(raw) {
-      if (!raw) return '';
-      let s = String(raw);
-      s = s.replace(/```html|```/g, '');
-      s = s.replace(/<pre[\s\S]*?<\/pre>/gi, '');
-      s = s.replace(/\{\s*"carbo_g"[\s\S]*?\}\s*$/i, '');
-      return s.trim();
-    }
-    function buildDetalhesTopicos({descricao, carbo_g, pg_cho_eq, glicemia, icr, isf, alvo, insRapida, strat}) {
-      const totCHO = Number(carbo_g || 0);
-      const totPG  = Number(pg_cho_eq || 0);
-      const doseCho = totCHO / icr;
-      const doseCor = Math.max(0, (glicemia - alvo) / isf);
-      const dosePg  = strat === 'regular_now' ? (totPG / icr) : 0;
-      const arred = (n)=> Math.round(Number(n||0));
-      const doseCho_i = arred(doseCho);
-      const doseCor_i = arred(doseCor);
-      const dosePg_i  = arred(dosePg);
-      const totalRapida_i = arred(doseCho + doseCor);
+    const mensagem=document.getElementById('mensagem').value.trim();
+    const glicemia=Number(document.getElementById('glicemia').value);
+    const tipo=document.getElementById('tipo_refeicao').value||'outro';
+    const strat=document.getElementById('pg_strategy').value;
 
-      let html = '';
-      html += `<div class="details-clean">`;
-      html += `<h3 style="margin:.2rem 0 .4rem">Refeição informada</h3>`;
-      html += `<p style="margin:.2rem 0 .8rem">${descricao || '-'}</p>`;
-      html += `<h3 style="margin:.2rem 0 .4rem">📊 Totais</h3>`;
-      html += `<ul style="margin:.2rem 0 .8rem; padding-left:18px;">
-        <li>Carboidratos estimados: <b>${totCHO.toFixed(0)} g</b></li>
-        <li>Proteína+gordura (CHO equivalente): <b>${totPG.toFixed(0)} g</b></li>
-      </ul>`;
-      html += `<h3 style="margin:.2rem 0 .4rem">💉 Insulina</h3>`;
-      const linhas = [];
-      if (doseCor_i > 0) {
-        linhas.push(`Correção: (${glicemia} - ${alvo}) / ${isf} = ${doseCor.toFixed(2)} ⇒ <b>${doseCor_i}U</b>`);
+    resumo.textContent='Calculando...';
+    detalhesBox.style.display='none'; detalhesHTML.innerHTML='';
+
+    try{
+      const h=await getAuthHeaders();
+      const hasPhoto = !!(document.getElementById('foto')?.files?.length);
+      let payload = { userId:USER_ID, glicemia, pg_strategy:strat, tipo };
+      let url = '/api/chat';
+
+      if(hasPhoto){
+        const f=document.getElementById('foto').files[0];
+        // Compacta p/ celular não travar
+        const dataUrl = await downscaleToDataURL(f, 300, 0.85);
+        url='/api/chat-image';
+        payload.image_data_url=dataUrl;
+        if(mensagem) payload.message=mensagem;
+      }else{
+        payload.message=mensagem;
       }
-      linhas.push(`${insRapida.toUpperCase()} (carboidrato): ${totCHO} ÷ ${icr} = ${doseCho.toFixed(2)}U ⇒ <b>${doseCho_i}U</b>${doseCor_i>0?` + Correção(${doseCor_i}U) = <b>${totalRapida_i}U</b>`:''}`);
-      if (strat === 'regular_now') {
-        linhas.push(`Insulina Regular (proteína/gordura): ${totPG} ÷ ${icr} = ${dosePg.toFixed(2)}U ⇒ <b>${dosePg_i}U</b>`);
-        linhas.push(`<b>Total bolus</b>: ${totalRapida_i}U ${insRapida.toUpperCase()} + ${dosePg_i}U Regular = <b>${totalRapida_i + dosePg_i}U</b>`);
-      } else {
-        linhas.push(`Proteína/gordura: <b>não aplicar agora</b> (estratégia “rapid_later”).`);
-        linhas.push(`<b>Total imediato</b>: ${totalRapida_i}U ${insRapida.toUpperCase()}`);
-      }
-      html += `<ul style="margin:.2rem 0 .8rem; padding-left:18px;"><li>${linhas.join('</li><li>')}</li></ul>`;
-      html += `</div>`;
-      return html;
-    }
-    async function processarResposta(d) {
-      const detalhesBox = document.getElementById('detalhesBox');
-      const detalhesHTML = document.getElementById('detalhesHTML');
-      const resumo = document.getElementById('resumo');
 
-      const ins = (d.config?.insulina_rapida || 'Humalog').toUpperCase();
-      const glic = Number(d.input?.glicemia||0);
-      const desc = (d.input?.descricao||'').replace(/\s+/g,' ').trim();
-      const t = d.totais || {};
-      const cfg = d.config || {};
-      const icr = Number(cfg.insulina_cho || 10);
-      const isf = Number(cfg.glicose_insulina || 50);
-      const alvo= Number(cfg.target || 100);
-      const strat = String(cfg.pg_strategy || 'regular_now');
+      const r=await fetch(url,{ method:'POST', headers:{'Content-Type':'application/json', ...h}, body:JSON.stringify(payload) });
+      const d=await r.json();
+      if(!d.ok){ resumo.textContent='Erro: '+(d.error||'Falha no cálculo.'); return; }
 
-      const doseCho = (Number(t.carbo_g||0))/icr;
-      const doseCor = Math.max(0,(glic-alvo)/isf);
-      const dosePg  = strat==='regular_now' ? (Number(t.pg_cho_equiv_g||0))/icr : 0;
-      const rint=(n)=>Math.round(Number(n||0));
-      const choU=rint(doseCho), corU=rint(doseCor), pgU=rint(dosePg), totalFiasp=rint(doseCho+doseCor);
+      // Resumo humanizado (igual ao seu fluxo atual)
+      const t=d.totais||{};
+      const cho_total = Number(t.carbo_g||0);
+      const pg_cho_eq = Number(t.pg_cho_equiv_g||0);
+      const icr = Number(d.config?.insulina_cho||10);
+      const isf = Number(d.config?.glicose_insulina||50);
+      const alvo = Number(d.config?.target||100);
+      const glicVal = Number(d.input?.glicemia ?? glicemia);
+      const stratUsed = (d.config?.pg_strategy||'regular_now');
 
-      let linhas=[];
-      linhas.push(`<strong>Para a refeição “${desc}” (glicemia: ${glic} mg/dL):</strong>`);
-      linhas.push(`• ${choU}U + ${corU}U de ${ins} para carboidratos e correção`);
-      if(strat==='regular_now'){
-        linhas.push(`• ${pgU}U de Insulina Regular (R) para proteína e gordura.`);
-        linhas.push(`• Total: ${totalFiasp}U ${ins} ; ${pgU}U Regular`);
-      } else {
+      const doseCho = cho_total/icr;
+      const doseCor = Math.max(0,(glicVal-alvo)/isf);
+      const dosePg  = (stratUsed==='regular_now') ? (pg_cho_eq/icr) : 0;
+
+      const choU_i = rint(doseCho);
+      const corU_i = rint(doseCor);
+      const pgU_i  = rint(dosePg);
+      const totalFiasp_i = rint(doseCho+doseCor);
+
+      const insRapida=(d.config?.insulina_rapida||'Fiasp').trim();
+      const refeicaoTxt=(d.input?.descricao||mensagem||'[foto]').replace(/\s+/g,' ').trim();
+
+      const linhas=[
+        `Para a refeição “${refeicaoTxt}” (glicemia: ${glicVal} mg/dL):`,
+        `• ${choU_i}U + ${corU_i}U de ${insRapida.toUpperCase()} para carboidratos e correção`
+      ];
+      if(stratUsed==='regular_now'){
+        linhas.push(`• ${pgU_i}U de Insulina Regular (R) para proteína e gordura.`);
+        linhas.push(`• Total: ${totalFiasp_i}U ${insRapida.toUpperCase()} ; ${pgU_i}U Regular`);
+      }else{
         linhas.push(`• Proteína/gordura: não aplicar agora; ver detalhes.`);
-        linhas.push(`• Total imediato: ${totalFiasp}U ${ins}`);
+        linhas.push(`• Total imediato: ${totalFiasp_i}U ${insRapida.toUpperCase()}`);
       }
-      resumo.innerHTML = linhas.join('\n');
+      resumo.textContent = linhas.join('\n');
 
+      // Detalhes técnicos
       const raw = d.detalhes_html || '';
       const clean = sanitizeModelHtml(raw);
-
-      const topicosHTML = buildDetalhesTopicos({
-        descricao: desc,
-        carbo_g: Number(t.carbo_g || 0),
-        pg_cho_eq: Number(t.pg_cho_equiv_g || 0),
-        glicemia: glic,
-        icr, isf, alvo,
-        insRapida: ins,
-        strat
-      });
-
-      const tmp = document.createElement('div');
-      tmp.innerHTML = clean;
-      const tbl = tmp.querySelector('table');
-      detalhesHTML.innerHTML='';
-
-      if(tbl){
-        const wrap = document.createElement('div');
-        wrap.className='table-wrap';
-        wrap.appendChild(tbl);
-        detalhesHTML.appendChild(wrap);
-      }
-      detalhesHTML.insertAdjacentHTML('beforeend', topicosHTML);
-
+      detalhesHTML.innerHTML = clean || '<em>Sem detalhes técnicos disponíveis.</em>';
       detalhesBox.style.display='block'; detalhesBox.open=false;
+
+    }catch(e){
+      console.error(e);
+      resumo.textContent='Erro ao conectar com o servidor.';
     }
+  };
 
-    /* ===== Nightscout badge ===== */
-    const NS_REFRESH_MS=240000; let nsHeaderTimer=null;
-    function hideNsBadge(){ nsBadge.style.display='none'; nsBadgeVal.textContent='--'; document.getElementById('glicemiaSource').textContent='(digite manualmente)'; const gi=document.getElementById('glicemia'); gi.readOnly=false; }
-    async function refreshNSBadge(){
-      if(!USER_ID) return hideNsBadge();
-      try{
-        const h=await getAuthHeaders();
-        const rCfg=await fetch(`/api/paciente/${encodeURIComponent(USER_ID)}`,{headers:{...h}}); const jCfg=await rCfg.json();
-        const urlNS=jCfg?.data?.nightscout_url?.trim();
-        if(!urlNS){ hideNsBadge(); return; }
-        const r=await fetch(`/api/ns/latest/${encodeURIComponent(USER_ID)}`,{headers:{...h}}); const j=await r.json();
-        if(!j.ok||!j.data){ hideNsBadge(); return; }
-        const mgdl=Number(j.data.mgdl);
-        nsBadgeVal.textContent = `${mgdl} mg/dL`;
-        nsBadge.style.display='inline-flex';
-        const chatVisivel=document.getElementById('chat')?.style.display!=='none';
-        const glicInp=document.getElementById("glicemia");
-        const src=document.getElementById("glicemiaSource");
-        if(glicInp){ glicInp.value=String(mgdl); glicInp.readOnly=true; if(src) src.textContent='(Nightscout)'; if(chatVisivel) validarCampos(); }
-      }catch(e){ console.warn('NS badge:',e); hideNsBadge(); }
-    }
-    function startNsHeaderTimer(){ stopNsHeaderTimer(); refreshNSBadge(); nsHeaderTimer=setInterval(refreshNSBadge, NS_REFRESH_MS); }
-    function stopNsHeaderTimer(){ if(nsHeaderTimer){ clearInterval(nsHeaderTimer); nsHeaderTimer=null; } }
-    document.addEventListener('visibilitychange',()=>{ if(document.hidden) stopNsHeaderTimer(); else if(USER_ID) startNsHeaderTimer(); });
+  // ===== Inicialização =====
+  initSupabase();
+</script>
 
-    /* ===== Histórico ===== */
-    let HIST_CACHE = [];
-
-    function fmtData(iso){ try{ const dt=new Date(iso); return dt.toLocaleString(); }catch{ return iso; } }
-
-    async function carregarHistorico(){
-      if(!USER_ID) return;
-      const tbody=document.querySelector('#tHistorico tbody'); tbody.innerHTML='<tr><td colspan="10">Carregando...</td></tr>';
-      try{
-        const h=await getAuthHeaders();
-        const params=new URLSearchParams({ userId:USER_ID });
-        const ini=document.getElementById('f_inicio').value; const fim=document.getElementById('f_fim').value; const tipo=document.getElementById('f_tipo').value;
-        if(ini) params.set('start', new Date(ini+'T00:00:00').toISOString());
-        if(fim) params.set('end', new Date(fim+'T23:59:59.999').toISOString());
-        if(tipo) params.set('tipo', tipo);
-        const r=await fetch('/api/refeicoes?'+params.toString(),{headers:{...h}});
-        const j=await r.json();
-        if(!j.ok){ tbody.innerHTML=`<tr><td colspan="10">${j.error||'Falha ao carregar.'}</td></tr>`; return; }
-
-        HIST_CACHE = Array.isArray(j.data) ? j.data : [];
-
-        if(HIST_CACHE.length===0){ tbody.innerHTML=`<tr><td colspan="10">Sem registros.</td></tr>`; return; }
-        tbody.innerHTML='';
-        HIST_CACHE.forEach(row=>{
-          const desc=((row.descricao || '').replace(/^\[foto\]\s*/i,'').replace(/\s+/g,' ').slice(0,180));
-          const fotoCell=row.foto_url ? `<a href="${row.foto_url}" target="_blank" rel="noopener"><img src="${row.foto_url}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid #eee" /></a>` : '-';
-          const tr=document.createElement('tr');
-          tr.innerHTML=`
-            <td>${fmtData(row.data_hora)}</td>
-            <td>${(row.tipo||'').toUpperCase()}</td>
-            <td>${row.glicemia ?? '-'}</td>
-            <td>${desc}</td>
-            <td>${Number(row.cho_total_g||0).toFixed(1)}</td>
-            <td>${Number(row.pg_cho_equiv_g||0).toFixed(1)}</td>
-            <td>${Number(row.dose_rapida_total||0).toFixed(1)}</td>
-            <td>${Number(row.dose_regular_pg||0).toFixed(1)}</td>
-            <td>${fotoCell}</td>
-            <td><button class="btn-del" title="Excluir" data-id="${row.id}">🗑️</button></td>`;
-          tbody.appendChild(tr);
-        });
-      }catch(e){ console.error(e); tbody.innerHTML=`<tr><td colspan="10">Erro ao carregar.</td></tr>`; }
-    }
-
-    // Exportar XLSX respeitando o filtro atual
-    function exportHistoricoXLSX(){
-      if(!Array.isArray(HIST_CACHE) || HIST_CACHE.length===0){
-        alert('Nada para exportar: aplique um filtro que retorne dados.');
-        return;
-      }
-      const rows = HIST_CACHE.map(r => ({
-        Data: new Date(r.data_hora).toLocaleString(),
-        Tipo: (r.tipo || '').toUpperCase(),
-        Glicemia_mg_dL: r.glicemia ?? '',
-        Descricao: (r.descricao || '').replace(/^\[foto\]\s*/i,''),
-        CHO_g: Number(r.cho_total_g || 0),
-        'Prot+Gord (CHO eq g)': Number(r.pg_cho_equiv_g || 0),
-        'Insulina A (rápida)': Number(r.dose_rapida_total || 0),
-        'Insulina B (Regular)': Number(r.dose_regular_pg || 0),
-        FotoURL: r.foto_url || ''
-      }));
-      const ws = XLSX.utils.json_to_sheet(rows);
-      ws['!cols'] = [{wch:19},{wch:8},{wch:12},{wch:50},{wch:8},{wch:16},{wch:16},{wch:18},{wch:28}];
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Historico');
-      const ini = document.getElementById('f_inicio').value || '';
-      const fim = document.getElementById('f_fim').value || '';
-      const tipo = document.getElementById('f_tipo').value || 'todos';
-      const stamp = new Date().toISOString().slice(0,10);
-      const fname = `glicocerto_historico_${tipo}_${ini||'inicio'}_${fim||'fim'}_${stamp}.xlsx`;
-      XLSX.writeFile(wb, fname);
-    }
-
-    // Handlers dos botões de filtro
-    document.getElementById('btnFiltrar')?.addEventListener('click', carregarHistorico);
-    document.getElementById('btnHoje')?.addEventListener('click', ()=>{
-      const d=new Date();
-      const iso=d.toISOString().slice(0,10);
-      document.getElementById('f_inicio').value=iso;
-      document.getElementById('f_fim').value=iso;
-      carregarHistorico();
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/glicocerto/sw.js', { scope: '/glicocerto/' });
     });
-    document.getElementById('btnSemana')?.addEventListener('click', ()=>{
-      const fim=new Date(); const ini=new Date(Date.now()-6*86400000);
-      const isof=(fim.toISOString().slice(0,10)), isoi=(ini.toISOString().slice(0,10));
-      document.getElementById('f_inicio').value=isoi;
-      document.getElementById('f_fim').value=isof;
-      carregarHistorico();
-    });
-    document.getElementById('btnMes')?.addEventListener('click', ()=>{
-      const fim=new Date(); const ini=new Date(Date.now()-29*86400000);
-      const isof=(fim.toISOString().slice(0,10)), isoi=(ini.toISOString().slice(0,10));
-      document.getElementById('f_inicio').value=isoi;
-      document.getElementById('f_fim').value=isof;
-      carregarHistorico();
-    });
-    document.getElementById('btnBaixar')?.addEventListener('click', exportHistoricoXLSX);
+  }
+  let deferredPrompt;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    // Se quiser exibir um botão "Instalar", chame deferredPrompt.prompt() ao clicar
+  });
+</script>
 
-    // Exclusão de linha no histórico
-    document.addEventListener('click', async (ev) => {
-      const t=ev.target;
-      if(t?.classList?.contains('btn-del')){
-        const id=t.getAttribute('data-id'); if(!id||!confirm('Excluir este registro?')) return;
-        try{ const h=await getAuthHeaders(); const url=`/api/refeicoes/${encodeURIComponent(id)}?userId=${encodeURIComponent(USER_ID)}`; const r=await fetch(url,{ method:'DELETE', headers:{...h} }); const j=await r.json(); if(!j.ok){ alert('Falha ao excluir: '+(j.error||'')); return; } carregarHistorico(); }catch(e){ alert('Erro de rede ao excluir.'); }
-      }
-    });
-
-    /* ===== Chat ===== */
-    document.getElementById('btnEnviar').onclick=async()=>{
-      if(!USER_ID){ alert('Faça login para enviar.'); return; }
-      const resumo=document.getElementById('resumo'); const detalhesBox=document.getElementById('detalhesBox'); const detalhesHTML=document.getElementById('detalhesHTML');
-      const mensagem=document.getElementById('mensagem').value.trim();
-      const glicemia=Number(document.getElementById('glicemia').value);
-      const tipo=document.getElementById('tipo_refeicao').value||'outro';
-      const strat=document.getElementById('pg_strategy').value;
-
-      resumo.textContent='Calculando...'; detalhesBox.style.display='none'; detalhesHTML.innerHTML='';
-      try{
-        const h=await getAuthHeaders(); const temFoto=!!(document.getElementById('foto')?.files?.length);
-        let payload={ userId:USER_ID, glicemia, pg_strategy:strat, tipo }; let url='/api/chat';
-
-        if(temFoto){
-          const f=document.getElementById('foto').files[0];
-          const dataUrl=await downscaleToDataURL(f, 1024, 1024, 'image/jpeg', 0.7);
-          url='/api/chat-image';
-          payload.image_data_url=dataUrl;
-          if(mensagem) payload.message=mensagem;
-        } else {
-          payload.message=mensagem;
-        }
-
-        const r=await fetch(url,{method:'POST', headers:{'Content-Type':'application/json', ...h}, body:JSON.stringify(payload)});
-        const d=await r.json();
-        if(!d.ok){ resumo.textContent='Erro: '+(d.error||'Falha no cálculo.'); return; }
-        await processarResposta(d);
-      }catch(e){ console.error(e); resumo.textContent='Erro ao conectar com o servidor.'; }
-    };
-
-    document.getElementById('btnNovo')?.addEventListener('click', () => {
-      const msg=document.getElementById('mensagem'); if(msg) msg.value='';
-      const f=document.getElementById('foto'); const p=document.getElementById('previewFoto'); const rm=document.getElementById('btnLimparFoto');
-      if(f) f.value=''; if(p){ p.src=''; p.style.display='none'; } if(rm) rm.style.display='none';
-      document.getElementById('tipo_refeicao').value='outro';
-      const resumo=document.getElementById('resumo'); const detalhesBox=document.getElementById('detalhesBox'); const detalhesHTML=document.getElementById('detalhesHTML');
-      if(resumo) resumo.textContent='Aguardando…'; if(detalhesHTML) detalhesHTML.innerHTML=''; if(detalhesBox){ detalhesBox.style.display='none'; detalhesBox.open=false; }
-      refreshNSBadge(); validarCampos();
-    });
-
-    // start
-    initSupabase();
-  </script>
 </body>
 </html>
