@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <base href="/glicocerto/">
+  <link rel="manifest" href="/glicocerto/manifest.webmanifest">
+  <meta name="theme-color" content="#0b0b0b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <link rel="apple-touch-icon" href="/glicocerto/icons/icon-192.png">
+  <title>GlicoCerto</title>
+  <style>
+    :root { --brand:#2aa775; --brand-700:#248c62; --bg:#f6f6f6; --text:#1f2937; --muted:#6b7280; --card:#ffffff; --border:#e7e7e7; --thead:#f5f5f5; }
+    :root[data-theme="dark"]{ --bg:#0b0b0c; --card:#111114; --text:#e5e7eb; --border:#25262b; --muted:#9ca3af; --thead:#141519; }
+
+    :root{ --input-bg:#ffffff; --input-text:#111; --input-border:#dddddd; }
+    :root[data-theme="dark"]{ --input-bg:#16171b; --input-text:#e5e7eb; --input-border:#2a2b31; }
+
+    *{box-sizing:border-box}
+    html, body { height:100%; }
+    body { font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background: var(--bg); color: var(--text); margin:0; line-height:1.45; }
+
+    header { position: sticky; top: 0; z-index: 100; background: var(--brand); color:#fff; padding:10px 12px; font-size:18px; font-weight:700; display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .left-brand{ display:flex; align-items:center; gap:8px; }
+    .auth-box{ display:flex; align-items:center; gap:8px; flex-wrap:nowrap; }
+
+    /* Ícone único de tema */
+    .theme-icon-btn{
+      background:rgba(255,255,255,.18); color:#fff; border:1px solid rgba(255,255,255,.25);
+      width:36px; height:36px; border-radius:999px; font-size:16px; cursor:pointer;
+      display:grid; place-items:center; line-height:1;
+    }
+
+    /* Badge Nightscout – COMPACTO */
+    .ns-badge{
+      background:#ffffff; color:#111827; border-radius:999px;
+      padding:4px 8px; min-height:28px; display:none; align-items:center; justify-content:center; gap:6px; white-space:nowrap;
+      border:1px solid rgba(0,0,0,.06); font-weight:700; font-size:12px; /* menor */
+      max-width: 38vw; overflow:hidden; text-overflow:ellipsis;
+    }
+    .ns-badge .dot{width:8px; height:8px; border-radius:50%; background:#10b981; display:inline-block}
+
+    /* Usuário + menu */
+    .user-chip{ display:flex; align-items:center; gap:6px; position:relative; }
+    .avatar,.initials{ width:28px; height:28px; border-radius:50%; }
+    .avatar{ object-fit:cover; background:#eee; border:1px solid rgba(0,0,0,.05); }
+    .initials{ display:grid; place-items:center; background:#0ea5e9; color:#fff; font-weight:700; font-size:12px; border:1px solid rgba(0,0,0,.05); }
+    .menu-btn{ background:#fff; color:#111827; border:none; border-radius:10px; min-height:32px; padding:6px 10px; cursor:pointer; font-weight:600; }
+
+    /* Dropdown que respeita o TEMA */
+    .dropdown{
+      position:absolute; right:0; top:42px; background:var(--card); color:var(--text);
+      border:1px solid var(--border); border-radius:12px; min-width:200px;
+      box-shadow:0 12px 28px rgba(0,0,0,.18); display:none; overflow:hidden;
+    }
+    .dropdown.open{ display:block; }
+    .dropdown .hd{ padding:10px 12px; font-size:12px; color:var(--muted); border-bottom:1px solid var(--border); }
+    .dropdown button{
+      width:100%; text-align:left; padding:10px 12px; background:none; border:none; cursor:pointer; font:inherit; color:var(--text);
+      display:flex; align-items:center; gap:8px;
+    }
+    .dropdown button:hover{ background:var(--thead); }
+
+    main { width: 100%; margin: 0 auto; padding: 16px; padding-bottom: 90px; }
+
+    .tabs { display:flex; gap:8px; margin:0 0 12px; padding:0 2px 4px; flex-wrap:wrap; }
+    .tab-btn { border:1px solid var(--border); background:#fff; padding:10px 14px; cursor:pointer; border-radius:999px; min-height:40px; }
+    .tab-btn.active { background: var(--brand); color:#fff; border-color: var(--brand); }
+
+    .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow: 0 1px 2px rgba(0,0,0,.03); margin-bottom:12px; }
+
+    .grid { display:grid; grid-template-columns: 1fr; gap:12px; }
+    .grid-3 { display:grid; grid-template-columns: 1fr; gap:12px; }
+    @media (min-width: 720px){
+      main { max-width: 900px; }
+      .grid { grid-template-columns: repeat(2, minmax(180px,1fr)); }
+      .grid-3 { grid-template-columns: repeat(3, minmax(160px,1fr)); }
+    }
+    @media (min-width: 1120px){ main { max-width: 1100px; } }
+
+    label { font-size:13px; color:#374151; display:block; margin-bottom:4px; }
+    input, select, textarea {
+      width:100%; padding:12px; border:1px solid var(--input-border)!important; border-radius:10px; background:var(--input-bg)!important; color:var(--input-text)!important; font:inherit;
+    }
+    input:focus, select:focus, textarea:focus { outline: 2px solid #cff5e4; border-color: var(--brand)!important; box-shadow:0 0 0 2px rgba(42,167,117,.15); }
+    textarea { min-height:110px; resize:vertical; }
+    .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+
+    .btn { background: var(--brand); border:none; color:#fff; padding:12px 16px; border-radius:12px; cursor:pointer; min-height:44px; font-weight:600; }
+    .btn:disabled { opacity:.6; cursor:not-allowed; }
+    .btn:hover{ background: var(--brand-700); }
+
+    .muted { color:var(--muted); font-size:12px; }
+    .note{background:#fff3cd;border:1px solid #ffeeba;color:#856404;padding:10px;border-radius:10px;margin-top:10px;}
+    .resumo { white-space:pre-wrap; background:var(--card); color:var(--text); border:1px solid var(--border); border-radius:10px; padding:12px; margin-top:12px; }
+    .resumo strong{ font-weight:800 }
+    .disclaimer { margin-top:10px; font-size:12px; color:#666; }
+    details summary { cursor:pointer; user-select:none; }
+    .ok{color:#1e7e34} .err{color:#b91c1c}
+
+    .table-wrap { overflow:auto; -webkit-overflow-scrolling:touch; border:1px solid var(--border); border-radius:12px; }
+    table { width:100%; border-collapse: collapse; min-width: 900px; background: var(--card); color: var(--text); }
+    th, td { border-bottom:1px solid var(--border); padding:10px 8px; text-align:left; font-size:14px; vertical-align:top; }
+    th { background: var(--thead); position: sticky; top:0; z-index:1; }
+    .btn-del { background:#e11d48; color:#fff; border:none; padding:8px 10px; border-radius:10px; cursor:pointer; min-height:40px; }
+
+    .details-clean { border:1px solid var(--border); border-radius:10px; padding:10px; background:var(--card); }
+    .details-clean .gc-table{ width:100%; border-collapse:collapse; font-size:14px; }
+    .details-clean .gc-table th, .details-clean .gc-table td{ border:1px solid var(--border); padding:6px 8px; text-align:left; }
+    .details-clean .gc-table th{ background:var(--thead); }
+
+    .bottom-nav{ position:fixed; left:0; right:0; bottom:0; height:64px; background:var(--card); border-top:1px solid var(--border); display:none; align-items:center; justify-content:space-around; z-index:200; }
+    .bottom-nav button{ background:none; border:none; font:inherit; color:var(--text); display:flex; flex-direction:column; align-items:center; gap:4px; padding:8px 12px; border-radius:12px; }
+    .bottom-nav button.active{ color:#fff; background:var(--brand); }
+    .bottom-nav .icon{ font-size:18px; line-height:1; }
+
+    @media (max-width: 720px){
+      .tabs{ display:none; }
+      body{ padding-bottom:72px; }
+      .bottom-nav{ display:flex; }
+    }
+
+    html:not([data-theme="dark"]) input, html:not([data-theme="dark"]) select, html:not([data-theme="dark"]) textarea{ color-scheme: light; }
+    html[data-theme="dark"] input, html[data-theme="dark"] select, html[data-theme="dark"] textarea{ color-scheme: dark; }
+  </style>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.55.0/dist/umd/supabase.js" defer></script>
+</head>
+<body>
+  <header>
+    <div class="left-brand"><span>💬</span><span>GlicoCerto</span></div>
+
+    <div class="auth-box">
+      <!-- Ícone de tema -->
+      <button id="themeBtn" class="theme-icon-btn" aria-label="Tema">☼</button>
+
+      <!-- Nightscout badge (compacto) -->
+      <div id="nsBadge" class="ns-badge" title="Glicemia atual (Nightscout)">
+        <span class="dot"></span><span id="nsBadgeVal">--</span>
+      </div>
+
+      <!-- Usuário + menu -->
+      <div class="user-chip" id="userChip" style="display:none">
+        <img id="userAvatar" class="avatar" alt="perfil" referrerpolicy="no-referrer" crossorigin="anonymous"
+             onerror="this.style.display='none';document.getElementById('userInitials').style.display='grid'">
+        <div id="userInitials" class="initials" style="display:none"></div>
+
+        <button class="menu-btn" id="menuBtn" title="Menu">☰</button>
+        <div class="dropdown" id="userMenu" role="menu" aria-label="Menu do usuário">
+          <div class="hd">Menu</div>
+          <button data-menu="ajuda">❓ Ajuda</button>
+          <button data-menu="termos">📜 Termos</button>
+          <button data-menu="sair">⎋ Sair</button>
+        </div>
+      </div>
+
+      <button class="menu-btn" id="btnLogin" style="display:none">Entrar</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="gate" class="card" style="display:block; text-align:center; padding:28px;">
+      <h2 style="margin:0 0 6px">Bem-vindo ao GlicoCerto</h2>
+      <p style="margin:0 0 16px">Faça login para acessar seu perfil, configurações e histórico.</p>
+      <button class="menu-btn" id="btnLoginGate">Entrar</button>
+      <p class="muted" style="margin-top:12px;">Seu acesso é individual e seguro.</p>
+    </section>
+
+    <div id="app" style="display:none;">
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="paciente">Paciente</button>
+        <button class="tab-btn" data-tab="chat">Chat</button>
+        <button class="tab-btn" data-tab="historico">Histórico</button>
+      </div>
+
+      <!-- Paciente -->
+      <section id="paciente" class="card">
+        <h2 style="margin-top:0">Configurações do Paciente (Anamnese)</h2>
+        <p class="muted">Preencha e clique em <b>Salvar</b>. Estes dados serão usados no cálculo das doses.</p>
+
+        <div class="grid">
+          <div><label>Nome</label><input id="nome" placeholder="Ex.: Leandro" /></div>
+          <div><label>Sexo</label>
+            <select id="sexo"><option value="">-- selecione --</option><option>Masculino</option><option>Feminino</option><option>Outro</option></select>
+          </div>
+          <div><label>Idade (anos)</label><input id="idade" type="number" inputmode="numeric" min="0" step="1" /></div>
+          <div><label>Altura (m)</label><input id="altura" type="number" inputmode="decimal" min="0" step="0.01" placeholder="1,80 → use ponto: 1.80"/></div>
+
+          <div><label>Insulina Basal</label><input id="insulina_basal" placeholder="Ex.: Tresiba, Lantus, NPH" /></div>
+          <div><label>Dose diária basal (U)</label><input id="dose_diaria" type="number" inputmode="numeric" min="0" step="0.5" /></div>
+
+          <div><label>Insulina Rápida (ultra-rápida)</label><input id="insulina_rapida" placeholder="Ex.: Fiasp, Humalog (Lispro), Novorapid (Aspart)" /></div>
+          <div><label>ICR – g de carbo por 1U <span class="muted">(insulina_cho)</span></label><input id="icr" type="number" inputmode="numeric" min="1" step="0.1" placeholder="Ex.: 10"/></div>
+
+          <div><label>ISF – mg/dL por 1U <span class="muted">(glicose_insulina)</span></label><input id="isf" type="number" inputmode="numeric" min="1" step="1" placeholder="Ex.: 50"/></div>
+          <div><label>Glicemia alvo (mg/dL) <span class="muted">(target)</span></label><input id="target" type="number" inputmode="numeric" min="60" step="1" placeholder="Ex.: 100"/></div>
+
+          <div><label>% calorias de proteína+gordura a considerar (0–100)</label><input id="pct_cal_pf" type="number" inputmode="numeric" min="0" max="100" step="1" value="100"/></div>
+          <div><label>Estratégia para Proteína+Gordura</label>
+            <select id="pg_strategy">
+              <option value="regular_now">Usar Insulina Regular (R) agora</option>
+              <option value="rapid_later">Não aplicar agora com rápida (orientar depois)</option>
+            </select>
+          </div>
+
+          <div><label>Valor de hipoglicemia (mg/dL)</label><input id="hipo" type="number" inputmode="numeric" min="40" step="1" placeholder="Ex.: 70"/></div>
+          <div><label>Valor de hiperglicemia (mg/dL)</label><input id="hiper" type="number" inputmode="numeric" min="120" step="1" placeholder="Ex.: 180"/></div>
+
+          <div><label>Nightscout URL</label><input id="nightscout_url" placeholder="Ex.: https://meu-ns.onrender.com" /></div>
+          <div>
+            <label>Nightscout API_SECRET (opcional)</label>
+            <div class="row" style="gap:6px;">
+              <input id="nightscout_api_secret" type="password" placeholder="Somente se seu NS exigir" />
+              <button id="toggleSecret" class="menu-btn" type="button" title="Mostrar/ocultar">👁️</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:12px; gap:8px;">
+          <button class="btn" id="btnSalvar">Salvar</button>
+          <span id="statusSalvar" class="muted" style="min-height:24px"></span>
+        </div>
+      </section>
+
+      <!-- Chat -->
+      <section id="chat" class="card" style="display:none">
+        <h2 style="margin-top:0">Chat de Refeição</h2>
+
+        <div id="pgNote" class="note" style="display:none"></div>
+
+        <div class="grid col-1">
+          <div>
+            <label>Refeição (ex.: 80g arroz, 50g feijão, 1 ovo)</label>
+            <textarea id="mensagem" placeholder="Descreva com peso/medida e tipos" required></textarea>
+          </div>
+          <div>
+            <label>Foto da refeição (opcional)</label>
+            <div class="row">
+              <input type="file" id="foto" accept="image/*" capture="environment">
+              <img id="previewFoto" alt="" style="display:none; max-width:160px; border:1px solid #eee; border-radius:8px;">
+              <button class="menu-btn" id="btnLimparFoto" type="button" style="display:none">Remover foto</button>
+            </div>
+            <div class="muted">Você pode enviar só a foto, só o texto, ou ambos.</div>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div>
+            <label>Tipo da refeição</label>
+            <select id="tipo_refeicao">
+              <option value="cafe">Café</option>
+              <option value="almoco">Almoço</option>
+              <option value="lanche">Lanche</option>
+              <option value="jantar">Jantar</option>
+              <option value="ceia">Ceia</option>
+              <option value="outro" selected>Outro</option>
+            </select>
+          </div>
+          <div>
+            <label>Glicemia atual (mg/dL) <span class="muted" id="glicemiaSource"></span></label>
+            <input id="glicemia" type="number" inputmode="numeric" step="1" placeholder="Ex.: 160" required/>
+            <div id="glicErr" class="muted" style="display:none;color:#b91c1c">Informe a glicemia (número válido).</div>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px; gap:8px;">
+          <button class="btn" id="btnEnviar" disabled>Enviar</button>
+          <button class="menu-btn" id="btnNovo" type="button" title="Novo chat">Novo</button>
+          <span class="muted">Usa as configurações salvas do paciente.</span>
+        </div>
+
+        <div id="resumo" class="resumo">Aguardando…</div>
+
+        <details id="detalhesBox" style="display:none">
+          <summary>ver detalhes técnicos</summary>
+          <div id="detalhesHTML" class="details-clean"></div>
+        </details>
+
+        <div class="disclaimer">⚠️ Este app não substitui orientação médica.</div>
+      </section>
+
+      <!-- Histórico -->
+      <section id="historico" class="card" style="display:none">
+        <h2 style="margin-top:0">Histórico de Refeições</h2>
+
+        <div class="grid-3">
+          <div><label>Início</label><input type="date" id="f_inicio"></div>
+          <div><label>Fim (inclusive)</label><input type="date" id="f_fim"></div>
+          <div><label>Tipo</label>
+            <select id="f_tipo">
+              <option value="todos" selected>Todos</option>
+              <option value="cafe">Café</option>
+              <option value="almoco">Almoço</option>
+              <option value="lanche">Lanche</option>
+              <option value="jantar">Jantar</option>
+              <option value="ceia">Ceia</option>
+              <option value="outro">Outro</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px; gap:8px;">
+          <button class="btn" id="btnFiltrar">Filtrar</button>
+          <button class="btn" id="btnHoje">Hoje</button>
+          <button class="btn" id="btnSemana">Últimos 7 dias</button>
+          <button class="btn" id="btnMes">Últimos 30 dias</button>
+        </div>
+
+        <div class="table-wrap" style="margin-top:12px;">
+          <table id="tHistorico">
+            <thead>
+              <tr>
+                <th>Data</th><th>Refeição</th><th>Glicemia</th><th>Alimento (descrição)</th>
+                <th>Total CHO (g)</th><th>Total gordura+proteína (CHO eq g)</th>
+                <th>Total Insulina A (rápida)</th><th>Total Insulina B (Regular)</th>
+                <th>Foto</th><th>Ações</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="muted" style="margin-top:6px;">A = insulina rápida (carbo + correção); B = Insulina Regular (proteína+gordura).</div>
+      </section>
+
+      <!-- Ajuda -->
+      <section id="ajuda" class="card" style="display:none">
+        <h2 style="margin-top:0">Ajuda (FAQ)</h2>
+        <details open>
+          <b>Visão geral do app</b>
+          <div class="details-clean">
+            <p>O GlicoCerto calcula doses a partir da sua <b>Anamnese</b> (configurações do paciente) e da <b>Refeição</b> informada no <b>Chat</b> (texto e/ou foto) com a <b>Glicemia</b> atual. O <b>Histórico</b> lista e permite filtrar/excluir registros. O <b>Tema</b> pode ser claro (☀️) ou escuro (🌙).</p>
+          </div>
+        </details>
+        <div class="details-clean">
+          
+          <h3>Conceitos básicos</h3>
+          <ul>
+            <li><b>ICR (Insulin-to-Carb Ratio)</b>: quantos gramas de carboidrato são cobertos por 1 unidade (U) de insulina <b>ultra-rápida</b>. Ex.: ICR=10 → 10 g de carbo = 1 U.</li>
+            <li><b>ISF (Insulin Sensitivity Factor)</b>: redução esperada da glicemia (mg/dL) por 1 U de insulina. Ex.: ISF=50 → 1 U reduz ~50 mg/dL.</li>
+            <li><b>Alvo</b>: valor de glicemia desejado após correção. Se a glicemia atual estiver acima do alvo, entra a <b>dose de correção</b> = (glicemia atual − alvo)/ISF.</li>
+            <li><b>CHO equivalente de Proteína+Gordura (P+G)</b>: parte calórica de P+G que pode elevar a glicemia tardiamente. O app converte uma fração dessa energia em “g de CHO equivalente”.</li>
+          </ul>
+
+          <h3>Por que preencher cada campo da Anamnese?</h3>
+          <ul>
+            <li><b>Insulina Rápida</b> (ultra-rápida: Fiasp, Humalog/Lispro, Novorapid/Aspart): aparece nas recomendações e é usada para <b>carboidratos</b> e <b>correção</b>.</li>
+            <li><b>ICR</b>: determina a <b>dose para carboidratos</b>. DoseCarbo = CHO_total/ICR.</li>
+            <li><b>ISF</b>: determina a <b>dose de correção</b>. DoseCorreção = max(0, (Glicemia−Alvo)/ISF).</li>
+            <li><b>Alvo</b>: ponto de referência da correção (nem sempre 100; use seu alvo clínico).</li>
+            <li><b>% P+G</b> e <b>Estratégia</b>: definem <b>se</b> e <b>como</b> entra dose para proteína+gordura (tardia).</li>
+            <li><b>Insulina Basal</b> (ex.: Tresiba, Lantus, Levemir, NPH): informativa; não entra no cálculo de refeição aqui.</li>
+            <li><b>Dose diária basal</b>: informativa; útil para revisão clínica.</li>
+            <li><b>Hipo/Hiper</b>: limites para avisos no fluxo (informativos).</li>
+            <li><b>Nightscout</b>: permite <b>preencher automaticamente</b> a glicemia atual.</li>
+          </ul>
+
+          <h3>Estratégias para Proteína+Gordura (P+G)</h3>
+          <ul>
+            <li><b>Usar Regular agora</b>: o app converte P+G em CHO eq e calcula <b>dose com Insulina Regular (R)</b> <i>no momento da refeição</i>. Você pode aplicar <b>duas doses agora</b>: ultra-rápida (carbo+correção) e Regular (P+G).</li>
+            <li><b>Não aplicar agora (somente ultra-rápida)</b>: o app <b>não</b> soma a parte de P+G no imediato. <u>Orientação</u>: aplicar uma <b>segunda dose</b> (referente à gordura/proteína) cerca de <b>1 hora após a refeição</b> usando sua <b>insulina ultra-rápida</b>. Essa abordagem pode reduzir pico tardio, mas deve ser confirmada com seu time de saúde.</li>
+          </ul>
+
+          <h3>Quais insulinas posso informar?</h3>
+          <ul>
+            <li><b>Rápida (campo “Insulina Rápida”)</b>: Fiasp, Humalog/Lispro, Novorapid/Aspart, Apidra, Admelog etc. (as de ação ultra-rápida).</li>
+            <li><b>Regular (usada para P+G quando escolher “Regular agora”)</b>: “Insulina Regular” (R).</li>
+            <li><b>Basais (campo “Insulina Basal”)</b>: Tresiba, Lantus, Levemir, NPH etc. (só informativo).</li>
+          </ul>
+
+          <h3>Nightscout — o que é e como obter?</h3>
+          <p><b>Nightscout</b> é um serviço comunitário para visualizar glicemias (CGM) em tempo real. Você pode:
+          <ol>
+            <li>Hospedar gratuitamente (por ex., em Render/Heroku) com seu banco de dados; ou</li>
+            <li>Usar serviços pagos que já entregam uma URL pronta.</li>
+          </ol>
+          Após configurado, informe a <b>URL</b> no app (ex.: <i>https://seu-ns.onrender.com</i>). Se sua instância exigir, adicione o <b>API_SECRET</b>. O app buscará o último valor (“entries.json?count=1”) para preencher a glicemia e mostrar o badge no topo.</p>
+
+          <h3>Como usar o Chat</h3>
+          <ul>
+            <li>Descreva a refeição com <b>quantidades</b> (g, ml, unidades) e/ou envie uma <b>foto</b>.</li>
+            <li>Informe a <b>glicemia</b> (ou deixe o Nightscout preencher).</li>
+            <li>O app calcula:
+              <ul>
+                <li><b>Ultra-rápida</b>: carbo + correção.</li>
+                <li><b>Regular</b> (se “Regular agora”): parte de P+G convertida.</li>
+              </ul>
+            </li>
+            <li>Os <b>Detalhes</b> trazem a tabela de alimentos e os números utilizados.</li>
+          </ul>
+
+          <h3>Exemplo rápido de cálculo</h3>
+          <p>ICR=10, ISF=50, Alvo=100. Refeição 70 g CHO; Glicemia 180. P+G→Regular agora com 20 g CHO eq.</p>
+          <ul>
+            <li>Dose carbo = 70/10 = 7 U (ultra-rápida)</li>
+            <li>Dose correção = max(0,(180−100)/50)=1.6 ≈ 2 U (ultra-rápida)</li>
+            <li>Dose P+G = 20/10 = 2 U (Regular)</li>
+            <li><b>Total agora:</b> 9 U ultra-rápida + 2 U Regular</li>
+          </ul>
+
+          <h3>Segurança</h3>
+          <p>Ferramenta de apoio — valide seus parâmetros com sua equipe de saúde. Evite usar em situações de emergência.</p>
+
+          <h3>Contato</h3>
+          <p><b>upbotsweb@gmail.com</b> · Feito por <b>Upbots</b>.</p>
+        </div>
+      </section>
+
+      <!-- Termos -->
+      <section id="termos" class="card" style="display:none">
+        <h2 style="margin-top:0">Termos de Utilização & Privacidade (LGPD)</h2>
+        <div class="details-clean">
+          <h3>1. Finalidade do tratamento</h3>
+          <p>Usamos seus dados (anamnese, glicemia, refeições, Nightscout) para calcular doses, exibir recomendações e manter seu histórico pessoal.</p>
+          <h3>2. Bases legais</h3>
+          <ul><li>Execução do serviço</li><li>Legítimo interesse</li><li>Consentimento (integrações opcionais)</li></ul>
+          <h3>3. Compartilhamento</h3>
+          <p>Sem marketing de terceiros. Fornecedores técnicos tratam dados sob contrato e segurança adequada.</p>
+          <h3>4. Retenção e exclusão</h3>
+          <p>Enquanto a conta estiver ativa ou necessário às finalidades. Você pode solicitar exclusão.</p>
+          <h3>5. Segurança</h3>
+          <p>Controles técnicos/organizacionais; nenhum sistema é 100% seguro.</p>
+          <h3>6. Direitos do titular</h3>
+          <ul><li>Acesso, correção, portabilidade e exclusão</li><li>Revogação de consentimento</li><li>Reclamação à ANPD</li></ul>
+          <h3>7. Contato do controlador</h3>
+          <p><b>upbotsweb@gmail.com</b> · Feito por <b>Upbots</b>.</p>
+          <h3>8. Alterações</h3>
+          <p>Publicaremos atualizações nesta página.</p>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <nav class="bottom-nav" id="bottomNav" aria-label="Navegação principal">
+    <button data-tab="paciente" id="bnPaciente" class="active"><span class="icon">👤</span><span>Paciente</span></button>
+    <button data-tab="chat" id="bnChat"><span class="icon">💬</span><span>Chat</span></button>
+    <button data-tab="historico" id="bnHistorico"><span class="icon">📈</span><span>Histórico</span></button>
+  </nav>
+
+  <script>
+    /* ===== Tema (ícone único) ===== */
+    const THEME_KEY='gc_theme_pref';
+    const root=document.documentElement;
+    const themeBtn=document.getElementById('themeBtn');
+    function setTheme(mode){ root.setAttribute('data-theme', mode); localStorage.setItem(THEME_KEY, mode); themeBtn.textContent = (mode==='dark') ? '☾' : '☼'; }
+    function loadTheme(){ const saved=localStorage.getItem(THEME_KEY)||'light'; setTheme(saved); }
+    themeBtn.addEventListener('click', ()=>{ const cur=root.getAttribute('data-theme')||'light'; setTheme(cur==='dark' ? 'light' : 'dark'); });
+    loadTheme();
+
+    /* ===== Supabase/Auth & App ===== */
+    let SUPABASE=null, USER_ID=null;
+    const btnLogin=document.getElementById('btnLogin');
+    const btnLoginGate=document.getElementById('btnLoginGate');
+    const userChip=document.getElementById('userChip');
+    const userAvatar=document.getElementById('userAvatar');
+    const userInitials=document.getElementById('userInitials');
+    const nsBadge=document.getElementById('nsBadge');
+    const nsBadgeVal=document.getElementById('nsBadgeVal');
+
+    function parseHashSession(){ if(!location.hash||location.hash.length<2)return null; const p=new URLSearchParams(location.hash.substring(1)); const at=p.get('access_token'); const rt=p.get('refresh_token'); const ea=p.get('expires_at'); if(!at||!rt) return null; return {access_token:at, refresh_token:rt, expires_at: ea?Number(ea):undefined}; }
+    async function initSupabase(){
+      const r=await fetch('/api/env'); const j=await r.json(); if(!j.ok) return;
+      SUPABASE=window.supabase.createClient(j.supabaseUrl,j.supabaseAnonKey);
+      const frag=parseHashSession(); if(frag){ try{ await SUPABASE.auth.setSession(frag); history.replaceState(null,'',location.origin+location.pathname);}catch{} }
+      const {data:{session}}=await SUPABASE.auth.getSession(); await applySession(session);
+      SUPABASE.auth.onAuthStateChange(async(_e,ss)=>{ await applySession(ss); });
+    }
+    async function ensureSupabaseReady(){ if(!SUPABASE){ const r=await fetch('/api/env'); const j=await r.json(); if(j?.ok) SUPABASE=window.supabase.createClient(j.supabaseUrl,j.supabaseAnonKey);} if(!SUPABASE) throw new Error('SUPABASE não inicializou.'); }
+    async function startLogin(){ try{ await ensureSupabaseReady(); const r=await SUPABASE.auth.signInWithOAuth({provider:'google', options:{redirectTo:location.origin, flowType:'implicit', skipBrowserRedirect:true}}); if(r.error) throw r.error; if(r.data?.url) location.href=r.data.url; else await SUPABASE.auth.signInWithOAuth({provider:'google', options:{redirectTo:location.origin, flowType:'implicit'}});}catch(e){ alert('Não foi possível iniciar o login.'); console.error(e);} }
+    btnLogin.onclick=startLogin; btnLoginGate?.addEventListener('click',startLogin);
+
+    function show(el,flag){ if(el) el.style.display=flag?'inline-flex':'none'; }
+    function showBlock(el,flag){ if(el) el.style.display=flag?'block':'none'; }
+    function initialsFromName(name,email){ const n=(name||'').trim(); if(n){ const parts=n.split(/\s+/).slice(0,2); return parts.map(s=>s[0]||'').join('').toUpperCase(); } const e=(email||'').trim(); return e?e[0].toUpperCase():'?'; }
+    function getAvatarUrl(u){ const md=u?.user_metadata||{}; const id0=u?.identities?.[0]?.identity_data||{}; return md.avatar_url||md.picture||id0.avatar_url||id0.picture||null; }
+
+    /* ===== Menu do usuário ===== */
+    const menuBtn=document.getElementById('menuBtn');
+    const userMenu=document.getElementById('userMenu');
+    document.addEventListener('click',(ev)=>{
+      const isBtn = ev.target.closest('#menuBtn');
+      const isMenu = ev.target.closest('#userMenu');
+      if(isBtn){ userMenu.classList.toggle('open'); return; }
+      if(!isMenu){ userMenu.classList.remove('open'); }
+    });
+    userMenu.addEventListener('click', (ev)=>{
+      const act = ev.target.closest('button')?.dataset?.menu;
+      if(!act) return;
+      userMenu.classList.remove('open');
+      if(act==='ajuda') showTab('ajuda');
+      if(act==='termos') showTab('termos');
+      if(act==='sair') doLogout();
+    });
+
+    async function applySession(session){
+      const gate=document.getElementById('gate'); const appWrap=document.getElementById('app');
+      if(session?.user){
+        const user=session.user; USER_ID=user.id;
+        const photo=getAvatarUrl(user);
+        if(photo){ userAvatar.src=photo; userAvatar.style.display='block'; userInitials.style.display='none'; }
+        else { userAvatar.style.display='none'; userInitials.style.display='grid'; userInitials.textContent=initialsFromName(user.user_metadata?.full_name,user.email); }
+        show(btnLogin,false); show(userChip,true); showBlock(gate,false); showBlock(appWrap,true);
+        const dados=await carregarPaciente(); showTab(dados ? 'chat':'paciente');
+        startNsHeaderTimer();
+      } else {
+        USER_ID=null; show(userChip,false); show(btnLogin,true); showBlock(gate,true); showBlock(appWrap,false); stopNsHeaderTimer(); hideNsBadge();
+      }
+      validarCampos();
+    }
+
+    async function doLogout(){
+      if(!SUPABASE) return;
+      await SUPABASE.auth.signOut();
+      stopNsHeaderTimer(); hideNsBadge();
+      document.getElementById('mensagem').value=''; document.getElementById('glicemia').value='';
+      document.querySelector('#tHistorico tbody')?.replaceChildren();
+      const f=document.getElementById('foto'); if(f) f.value='';
+      const p=document.getElementById('previewFoto'); if(p){ p.src=''; p.style.display='none'; }
+      document.getElementById('glicemia').readOnly=false; document.getElementById('glicemiaSource').textContent='';
+    }
+
+    async function getAuthHeaders(){ const {data:{session}}=await SUPABASE.auth.getSession(); const t=session?.access_token; return t?{Authorization:`Bearer ${t}`}:{ }; }
+
+    /* ===== Tabs ===== */
+    function showTab(target){
+      const sections={ paciente:document.getElementById('paciente'), chat:document.getElementById('chat'), historico:document.getElementById('historico'), ajuda:document.getElementById('ajuda'), termos:document.getElementById('termos') };
+      Object.values(sections).forEach(el=>el && (el.style.display='none'));
+      document.querySelectorAll('.tab-btn').forEach(t=>t.classList.remove('active'));
+      ['bnPaciente','bnChat','bnHistorico'].forEach(id=>document.getElementById(id)?.classList.remove('active'));
+      const t=target||'paciente';
+      if(sections[t]) sections[t].style.display='block';
+      const btn=[...document.querySelectorAll('.tab-btn')].find(b=>b.dataset.tab===t);
+      if(btn) btn.classList.add('active');
+      const bn=document.getElementById('bottomNav');
+      bn?.querySelectorAll('button').forEach(b=>{ if(b.dataset.tab===t) b.classList.add('active'); });
+      if(t==='historico') carregarHistorico();
+      window.scrollTo({top:0, behavior:'smooth'});
+    }
+    document.querySelectorAll('.tab-btn').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+    document.getElementById('bottomNav')?.addEventListener('click',(ev)=>{ const btn=ev.target.closest('button[data-tab]'); if(!btn) return; showTab(btn.dataset.tab); });
+
+    /* ===== Foto ===== */
+    function fileToDataURL(file){ return new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.onerror=rej; fr.readAsDataURL(file); }); }
+    const inpFoto=document.getElementById('foto'); const prev=document.getElementById('previewFoto'); const btnLimparFoto=document.getElementById('btnLimparFoto');
+    inpFoto?.addEventListener('change',()=>{ const f=inpFoto.files?.[0]; if(!f){ prev.style.display='none'; btnLimparFoto.style.display='none'; validarCampos(); return;} const url=URL.createObjectURL(f); prev.src=url; prev.style.display='inline-block'; btnLimparFoto.style.display='inline-block'; validarCampos(); });
+    btnLimparFoto?.addEventListener('click',()=>{ if(inpFoto) inpFoto.value=''; if(prev){ prev.src=''; prev.style.display='none'; } if(btnLimparFoto) btnLimparFoto.style.display='none'; validarCampos(); });
+
+    /* ===== Validação ===== */
+    const validNum=(v)=> v!=='' && isFinite(Number(v));
+    function validarCampos(){
+      const txt=(document.getElementById('mensagem')?.value.trim()||'');
+      const temTexto=txt.length>0;
+      const temFoto=!!(document.getElementById('foto')?.files?.length);
+      const gVal=document.getElementById('glicemia')?.value.trim()??'';
+      const gNum=validNum(gVal);
+      const tipoOk=!!document.getElementById('tipo_refeicao')?.value;
+      const canSend=((temTexto||temFoto)&&gNum&&tipoOk&&!!USER_ID);
+      const btn=document.getElementById('btnEnviar'); if(btn) btn.disabled=!canSend;
+      const err=document.getElementById('glicErr'); if(err) err.style.display=(!gNum && gVal!=='')?'block':'none';
+    }
+    document.addEventListener('input',(ev)=>{ if(['mensagem','glicemia','foto','tipo_refeicao','nightscout_api_secret'].includes(ev.target?.id)) validarCampos(); });
+
+    /* ===== Toggle API_SECRET eye ===== */
+    document.getElementById('toggleSecret')?.addEventListener('click',()=>{
+      const i=document.getElementById('nightscout_api_secret');
+      if(!i) return;
+      i.type = i.type === 'password' ? 'text' : 'password';
+    });
+
+    /* ===== Paciente ===== */
+    async function carregarPaciente(){ if(!USER_ID) return null; try{ const h=await getAuthHeaders(); const r=await fetch(`/api/paciente/${encodeURIComponent(USER_ID)}`,{headers:{...h}}); const j=await r.json(); if(!j.ok) return null; const d=j.data||null; if(d){ const set=(k,v)=>{ const el=document.getElementById(k); if(el) el.value=v??''; }; ['nome','sexo','idade','altura','insulina_basal','dose_diaria','insulina_rapida','icr','isf','target','pct_cal_pf','hipo','hiper','pg_strategy','nightscout_url','nightscout_api_secret'].forEach(k=>set(k,d[k])); mostrarNotaPG(); } return d; }catch{ return null; } }
+    function mostrarNotaPG(){ const note=document.getElementById('pgNote'); const strat=document.getElementById('pg_strategy').value||'regular_now'; if(strat==='rapid_later'){ note.style.display='block'; note.textContent='Estratégia: NÃO aplicar agora a dose referente a proteína+gordura. A orientação aparecerá nos detalhes.'; } else { note.style.display='none'; note.textContent=''; } }
+    document.getElementById('btnSalvar').onclick=async()=>{ if(!USER_ID){ alert('Faça login para salvar suas configurações.'); return; } const status=document.getElementById('statusSalvar'); status.textContent='Salvando...'; const num=(id)=>{ const v=document.getElementById(id).value.trim().replace(',', '.'); return v===''?null:Number(v); }; const txt=(id)=>{ const v=document.getElementById(id).value.trim(); return v===''?null:v; }; const payload={ userId:USER_ID, settings:{ nome:txt('nome'), sexo:txt('sexo'), idade:num('idade'), altura:num('altura'), insulina_basal:txt('insulina_basal'), dose_diaria:num('dose_diaria'), hipo:num('hipo'), hiper:num('hiper'), insulina_rapida:txt('insulina_rapida')||'Fiasp', icr:num('icr'), isf:num('isf'), target:num('target'), pct_cal_pf:num('pct_cal_pf')??100, pg_strategy:document.getElementById('pg_strategy').value||'regular_now', nightscout_url:txt('nightscout_url'), nightscout_api_secret:txt('nightscout_api_secret') } }; try{ const h=await getAuthHeaders(); const r=await fetch('/api/paciente',{method:'POST', headers:{'Content-Type':'application/json', ...h}, body:JSON.stringify(payload)}); const j=await r.json(); status.textContent=j.ok?'Configurações salvas com sucesso.':'Falha ao salvar.'; status.className=j.ok?'ok':'err'; if(j.ok) refreshNSBadge(); }catch{ status.textContent='Erro de rede ao salvar.'; status.className='err'; } };
+
+    /* ===== Chat ===== */
+    document.getElementById('btnEnviar').onclick=async()=>{ if(!USER_ID){ alert('Faça login para enviar.'); return; } const resumo=document.getElementById('resumo'); const detalhesBox=document.getElementById('detalhesBox'); const detalhesHTML=document.getElementById('detalhesHTML'); const mensagem=document.getElementById('mensagem').value.trim(); const glicemia=Number(document.getElementById('glicemia').value); const tipo=document.getElementById('tipo_refeicao').value||'outro'; const strat=document.getElementById('pg_strategy').value; resumo.textContent='Calculando...'; detalhesBox.style.display='none'; detalhesHTML.innerHTML=''; try{ const h=await getAuthHeaders(); const temFoto=!!(document.getElementById('foto')?.files?.length); let payload={ userId:USER_ID, glicemia, pg_strategy:strat, tipo }; let url='/api/chat'; if(temFoto){ const f=document.getElementById('foto').files[0]; const dataUrl=await fileToDataURL(f); url='/api/chat-image'; payload.image_data_url=dataUrl; if(mensagem) payload.message=mensagem; } else { payload.message=mensagem; } const r=await fetch(url,{method:'POST', headers:{'Content-Type':'application/json', ...h}, body:JSON.stringify(payload)}); const d=await r.json(); if(!d.ok){ resumo.textContent='Erro: '+(d.error||'Falha no cálculo.'); return; } const t=d.totais||{}; const cho_total=Number(t.carbo_g||0); const pg_cho_eq=Number(t.pg_cho_equiv_g||0); const icr=Number(d.config?.insulina_cho||10); const isf=Number(d.config?.glicose_insulina||50); const alvo=Number(d.config?.target||100); const glicVal=Number(d.input?.glicemia ?? glicemia); const stratUsed=(d.config?.pg_strategy||'regular_now'); const doseCho=cho_total/icr; const doseCor=Math.max(0,(glicVal-alvo)/isf); const dosePg=(stratUsed==='regular_now')?(pg_cho_eq/icr):0; const rint=(n)=>Math.round(Number(n||0)); const choU_i=rint(doseCho); const corU_i=rint(doseCor); const pgU_i=rint(dosePg); const totalFiasp_i=rint(doseCho+doseCor); const insRapida=(d.config?.insulina_rapida||'Fiasp').trim(); const refeicaoTxt=(d.input?.descricao||mensagem||'[foto]').replace(/\s+/g,' ').trim(); let linhas=[]; linhas.push(`Para a refeição “${refeicaoTxt}” (glicemia: ${glicVal} mg/dL):`); linhas.push(`• ${choU_i}U + ${corU_i}U de ${insRapida.toUpperCase()} para carboidratos e correção`); if(stratUsed==='regular_now'){ linhas.push(`• ${pgU_i}U de Insulina Regular (R) para proteína e gordura.`); linhas.push(`• Total: ${totalFiasp_i}U ${insRapida.toUpperCase()} ; ${pgU_i}U Regular`); } else { linhas.push(`• Proteína e gordura: não aplicar agora; ver detalhes.`); linhas.push(`• Total imediato: ${totalFiasp_i}U ${insRapida.toUpperCase()}`); } resumo.innerHTML = `<strong>${linhas.shift()}</strong>\n${linhas.join('\n')}`; 
+          const raw = d.detalhes_html || '';
+          const clean = raw.replace(/```html|```/g, '').replace(/<pre[\s\S]*?<\/pre>/gi, '').trim();
+          detalhesHTML.innerHTML= clean || '<em>Sem detalhes técnicos disponíveis.</em>';
+          detalhesBox.style.display='block'; detalhesBox.open=false; 
+        }catch(e){ console.error(e); resumo.textContent='Erro ao conectar com o servidor.'; } };
+
+    /* ===== Nightscout no topo (badge) + auto-preencher chat ===== */
+    const NS_REFRESH_MS=240000; let nsHeaderTimer=null;
+    function hideNsBadge(){ nsBadge.style.display='none'; nsBadgeVal.textContent='--'; document.getElementById('glicemiaSource').textContent='(digite manualmente)'; const gi=document.getElementById('glicemia'); gi.readOnly=false; }
+    async function refreshNSBadge(){
+      if(!USER_ID) return hideNsBadge();
+      try{
+        const h=await getAuthHeaders();
+        const rCfg=await fetch(`/api/paciente/${encodeURIComponent(USER_ID)}`,{headers:{...h}}); const jCfg=await rCfg.json();
+        const urlNS=jCfg?.data?.nightscout_url?.trim();
+        if(!urlNS){ hideNsBadge(); return; }
+        const r=await fetch(`/api/ns/latest/${encodeURIComponent(USER_ID)}`,{headers:{...h}}); const j=await r.json();
+        if(!j.ok||!j.data){ hideNsBadge(); return; }
+        const mgdl=Number(j.data.mgdl);
+        nsBadgeVal.textContent = `${mgdl} mg/dL`;
+        nsBadge.style.display='inline-flex';
+        const chatVisivel=document.getElementById('chat')?.style.display!=='none';
+        const glicInp=document.getElementById("glicemia");
+        const src=document.getElementById("glicemiaSource");
+        if(glicInp){ glicInp.value=String(mgdl); glicInp.readOnly=true; if(src) src.textContent='(Nightscout)'; if(chatVisivel) validarCampos(); }
+      }catch(e){ console.warn('NS badge:',e); hideNsBadge(); }
+    }
+    function startNsHeaderTimer(){ stopNsHeaderTimer(); refreshNSBadge(); nsHeaderTimer=setInterval(refreshNSBadge, NS_REFRESH_MS); }
+    function stopNsHeaderTimer(){ if(nsHeaderTimer){ clearInterval(nsHeaderTimer); nsHeaderTimer=null; } }
+    document.addEventListener('visibilitychange',()=>{ if(document.hidden) stopNsHeaderTimer(); else if(USER_ID) startNsHeaderTimer(); });
+
+    /* Botão “Novo chat” */
+    document.getElementById('btnNovo')?.addEventListener('click', () => {
+      const msg=document.getElementById('mensagem'); if(msg) msg.value='';
+      const f=document.getElementById('foto'); const p=document.getElementById('previewFoto'); const rm=document.getElementById('btnLimparFoto');
+      if(f) f.value=''; if(p){ p.src=''; p.style.display='none'; } if(rm) rm.style.display='none';
+      document.getElementById('tipo_refeicao').value='outro';
+      const resumo=document.getElementById('resumo'); const detalhesBox=document.getElementById('detalhesBox'); const detalhesHTML=document.getElementById('detalhesHTML');
+      if(resumo) resumo.textContent='Aguardando…'; if(detalhesHTML) detalhesHTML.innerHTML=''; if(detalhesBox){ detalhesBox.style.display='none'; detalhesBox.open=false; }
+      refreshNSBadge(); validarCampos();
+    });
+
+    /* ===== Histórico ===== */
+    function fmtData(iso){ try{ const dt=new Date(iso); return dt.toLocaleString(); }catch{ return iso; } }
+    async function carregarHistorico(){
+      if(!USER_ID) return;
+      const tbody=document.querySelector('#tHistorico tbody'); tbody.innerHTML='<tr><td colspan="10">Carregando...</td></tr>';
+      try{
+        const h=await getAuthHeaders();
+        const params=new URLSearchParams({ userId:USER_ID });
+        const ini=document.getElementById('f_inicio').value; const fim=document.getElementById('f_fim').value; const tipo=document.getElementById('f_tipo').value;
+        if(ini) params.set('start', new Date(ini+'T00:00:00').toISOString());
+        if(fim) params.set('end', new Date(fim+'T23:59:59.999').toISOString());
+        if(tipo) params.set('tipo', tipo);
+        const r=await fetch('/api/refeicoes?'+params.toString(),{headers:{...h}});
+        const j=await r.json();
+        if(!j.ok){ tbody.innerHTML=`<tr><td colspan="10">${j.error||'Falha ao carregar.'}</td></tr>`; return; }
+        if(!Array.isArray(j.data)||j.data.length===0){ tbody.innerHTML=`<tr><td colspan="10">Sem registros.</td></tr>`; return; }
+        tbody.innerHTML='';
+        j.data.forEach(row=>{
+          const desc=((row.descricao || '')
+            .replace(/^\[foto\]\s*/i,'')
+            .replace(/\s+/g,' ')
+            .slice(0,180));
+          const fotoCell=row.foto_url
+            ? `<a href="${row.foto_url}" target="_blank" rel="noopener"><img src="${row.foto_url}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid #eee" /></a>`
+            : '-';
+          const tr=document.createElement('tr');
+          tr.innerHTML=`
+            <td>${fmtData(row.data_hora)}</td>
+            <td>${(row.tipo||'').toUpperCase()}</td>
+            <td>${row.glicemia ?? '-'}</td>
+            <td>${desc}</td>
+            <td>${Number(row.cho_total_g||0).toFixed(1)}</td>
+            <td>${Number(row.pg_cho_equiv_g||0).toFixed(1)}</td>
+            <td>${Number(row.dose_rapida_total||0).toFixed(1)}</td>
+            <td>${Number(row.dose_regular_pg||0).toFixed(1)}</td>
+            <td>${fotoCell}</td>
+            <td><button class="btn-del" title="Excluir" data-id="${row.id}">🗑️</button></td>`;
+          tbody.appendChild(tr);
+        });
+      }catch(e){ console.error(e); tbody.innerHTML=`<tr><td colspan="10">Erro ao carregar.</td></tr>`; }
+    }
+
+    document.addEventListener('click', async (ev) => {
+      const t=ev.target;
+      if(t?.classList?.contains('btn-del')){
+        const id=t.getAttribute('data-id'); if(!id||!confirm('Excluir este registro?')) return;
+        try{ const h=await getAuthHeaders(); const url=`/api/refeicoes/${encodeURIComponent(id)}?userId=${encodeURIComponent(USER_ID)}`; const r=await fetch(url,{ method:'DELETE', headers:{...h} }); const j=await r.json(); if(!j.ok){ alert('Falha ao excluir: '+(j.error||'')); return; } carregarHistorico(); }catch(e){ alert('Erro de rede ao excluir.'); }
+      }
+    });
+
+    initSupabase();
+  </script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/glicocerto/sw.js', { scope: '/glicocerto/' });
+      });
+    }
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      // aqui você mostra um botão “Instalar” na sua UI;
+      // ao clicar: deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt = null;
+    });
+  </script>
+
+</body>
+</html>
