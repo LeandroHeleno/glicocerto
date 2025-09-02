@@ -512,8 +512,9 @@ app.delete("/api/refeicoes/:id", async (req, res) => {
 app.use((req, res, next) => {
   if (req.method !== "GET") return next();
   if (req.path.startsWith("/api/")) return next();
-  return res.sendFile(path.join(__dirname, "public", "index.html"));
+  return res.sendFile(path.join(__dirname, "public", "glicocerto", "index.html"));
 });
+
 
 // ---------- Start ----------
 const PORT = process.env.PORT || 3000;
