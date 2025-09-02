@@ -135,7 +135,8 @@
     <div class="auth-box">
       <!-- Ícone de tema -->
       <button id="themeBtn" class="theme-icon-btn" aria-label="Tema">☼</button>
-
+      <!-- botão de instalação-->
+      <button id="btnInstall" class="menu-btn">Instalar</button>
       <!-- Nightscout badge (compacto) -->
       <div id="nsBadge" class="ns-badge" title="Glicemia atual (Nightscout)">
         <span class="dot"></span><span id="nsBadgeVal">--</span>
@@ -670,19 +671,49 @@
     initSupabase();
   </script>
   <script>
+    // 1) Registrar o Service Worker
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/glicocerto/sw.js', { scope: '/glicocerto/' });
       });
     }
-    let deferredPrompt;
+
+    // 2) Lidar com o prompt de instalação (PWA)
+    let deferredPrompt = null;
+    const btnInstall = document.getElementById('btnInstall');
+
+    // Esconde o botão se já estiver instalado (desktop e iOS)
+    function isStandalone() {
+      return window.matchMedia('(display-mode: standalone)').matches
+            || (window.navigator.standalone === true);
+    }
+    function hideInstallBtn() { if (btnInstall) btnInstall.style.display = 'none'; }
+    function showInstallBtn() { if (btnInstall) btnInstall.style.display = 'inline-block'; }
+
+    if (isStandalone()) hideInstallBtn(); // já instalado
+
     window.addEventListener('beforeinstallprompt', (e) => {
+      // Impede o auto-prompt e guarda o evento
       e.preventDefault();
       deferredPrompt = e;
-      // aqui você mostra um botão “Instalar” na sua UI;
-      // ao clicar: deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt = null;
+      showInstallBtn();
+    });
+
+    btnInstall?.addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      hideInstallBtn();                  // evita cliques repetidos
+      deferredPrompt.prompt();           // mostra o prompt nativo
+      try { await deferredPrompt.userChoice; } catch {}
+      deferredPrompt = null;             // descarta o evento (só pode usar 1x)
+    });
+
+    window.addEventListener('appinstalled', () => {
+      // Instalado com sucesso
+      deferredPrompt = null;
+      hideInstallBtn();
     });
   </script>
+
 
 </body>
 </html>
