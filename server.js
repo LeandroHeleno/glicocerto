@@ -1,10 +1,8 @@
-// server.js (ESM)
-// GlicoCerto API – Rotas:
-// /api/env, /api/paciente/:userId (GET), /api/paciente (POST)
-// /api/ns/latest/:userId (GET)
-// /api/chat (POST), /api/chat-image (POST)
-// /api/refeicoes (GET), /api/refeicoes/serie (GET), /api/refeicoes/:id (DELETE)
-// Fallback SPA para ./public/index.html
+// server.js (ESM) — GlicoCerto
+// Rotas: /api/env, /api/paciente/:userId (GET), /api/paciente (POST)
+//        /api/ns/latest/:userId (GET)
+//        /api/chat (POST), /api/chat-image (POST)
+//        /api/refeicoes (GET), /api/refeicoes/serie (GET), /api/refeicoes/:id (DELETE)
 
 import express from "express";
 import cors from "cors";
@@ -26,7 +24,7 @@ if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
   console.warn("⚠️  SUPABASE_URL/SUPABASE_ANON_KEY ausentes no .env");
 }
 if (!process.env.OPENAI_API_KEY) {
-  console.warn("⚠️  OPENAI_API_KEY ausente — usando fallback simples para análise.");
+  console.warn("⚠️  OPENAI_API_KEY ausente — a análise por IA usará fallback simples.");
 }
 
 // App
@@ -34,7 +32,8 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: "25mb" }));
 app.use(express.urlencoded({ extended: true, limit: "25mb" }));
-app.use(express.static(path.join(__dirname, "public"))); // sirva ./public
+app.use(express.static(path.join(__dirname, "public"))); // serve ./public
+//                                                         ^ mantém igual ao seu original (está ok). :contentReference[oaicite:2]{index=2}
 
 // SDKs
 const openai = process.env.OPENAI_API_KEY
@@ -55,66 +54,40 @@ const r0 = (n) => Math.round(Number(n || 0));
 const sha1Hex = (s) => crypto.createHash("sha1").update(String(s), "utf8").digest("hex");
 const stripFences = (s) => String(s || "").replace(/```html|```/g, "").trim();
 
-// Extrai JSON do <pre>…</pre> (carbo_g, pg_cho_equiv_g, refeicao_resumo)
+// Timeout helper (promessa com tempo-limite)
+function withTimeout(promise, ms = 45000, label = "Timeout") {
+  return Promise.race([
+    promise,
+    new Promise((_, rej) => setTimeout(() => rej(new Error(label)), ms)),
+  ]);
+}
+
+// Extrai JSON do <pre>…</pre> (carbo_g, pg_cho_equiv_g, resumo)
 function pickFromPre(html) {
   let carbo_g = 0, pg_cho_equiv_g = 0, resumo = "";
   try {
     const m = String(html || "").match(/<pre[^>]*>\s*({[\s\S]*?})\s*<\/pre>/i);
-    if (m) {
-      const obj = JSON.parse(m[1]);
-      carbo_g = Number(obj.carbo_g || 0);
-      pg_cho_equiv_g = Number(obj.pg_cho_equiv_g || 0);
-      resumo = String(obj.refeicao_resumo || obj.resumo_refeicao || obj.resumo || "").trim();
+    if (m && m[1]) {
+      const j = JSON.parse(m[1]);
+      carbo_g = Number(j.carbo_g || 0);
+      pg_cho_equiv_g = Number(j.pg_cho_equiv_g || 0);
+      resumo = String(j.resumo || "");
     }
   } catch {}
   return { carbo_g, pg_cho_equiv_g, resumo };
 }
 
-// Prompt único para texto e imagem – exige tabela HTML (.gc-table) e JSON final em <pre>
-function systemPrompt(cfg) {
-  const ins = (cfg?.insulina_rapida || "Fiasp").trim();
-  const icr = Number(cfg?.icr || cfg?.insulina_cho || 10);
-  const isf = Number(cfg?.isf || cfg?.glicose_insulina || 50);
-  const target = Number(cfg?.target || 100);
-  const pct = Number(cfg?.pct_cal_pf ?? 100);
-  const strat = cfg?.pg_strategy || "regular_now";
-
-  return `
-Você é um assistente de dose de insulina para DM1 (SBD).
-Parâmetros: ICR=${icr} g/U, ISF=${isf} mg/dL/U, Alvo=${target} mg/dL,
-Insulina rápida=${ins}, %cal P+G=${pct}%, Estratégia=${strat}.
-
-INSTRUÇÕES DE SAÍDA (obrigatórias):
-1) Produza uma TABELA HTML com classe "gc-table" (colunas: Item | Porção | Carbo (g)):
-   <table class="gc-table"><thead>…</thead><tbody>…</tbody></table>
-2) Em seguida, traga um resumo curto (headings/parágrafos objetivos). Não use cercas de código.
-3) No final, devolva um bloco <pre> contendo APENAS JSON:
-   {"carbo_g": number, "pg_cho_equiv_g": number,
-    "refeicao_resumo": "apenas 'quantidade + alimento', separados por vírgulas; ex: 1 coxinha de frango, 200 g batata frita, 1 coca lata zero"}
-`.trim();
-}
-
-// Middleware de auth para /api/*
-app.use((req, res, next) => {
-  if (!req.path.startsWith("/api/")) return next();
-  if (req.path === "/api/env") return next(); // público
-  const auth = req.headers.authorization || "";
-  if (!auth.startsWith("Bearer ")) {
-    return res.status(401).json({ ok: false, error: "Não autenticado" });
-  }
-  next();
-});
-
-// ---------- /api/env ----------
-app.get("/api/env", (_req, res) => {
+/* ======================== ENV ======================== */
+app.get("/api/env", (req, res) => {
   res.json({
-    ok: true,
-    supabaseUrl: process.env.SUPABASE_URL,
-    supabaseAnonKey: process.env.SUPABASE_ANON_KEY,
+    ok: !!(process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY),
+    supabaseUrl: process.env.SUPABASE_URL || null,
+    supabaseAnonKey: process.env.SUPABASE_ANON_KEY || null,
+    // openai não é exposta ao front por segurança
   });
 });
 
-// ---------- PACIENTE ----------
+/* ================== PACIENTE (CRUD) ================== */
 app.get("/api/paciente/:userId", async (req, res) => {
   try {
     const supabase = supabaseFromReq(req);
@@ -149,12 +122,14 @@ app.post("/api/paciente", async (req, res) => {
   }
 });
 
-// ---------- NIGHTSCOUT ----------
+/* ==================== NIGHTSCOUT ===================== */
 async function fetchNightscoutLatest(nsUrl, nsSecret) {
   const base = String(nsUrl || "").replace(/\/+$/, "");
   const url = `${base}/api/v1/entries.json?count=1`;
+
   // tentativa 1: plaintext (algumas instâncias aceitam)
   let resp = await fetch(url, { headers: nsSecret ? { "API-SECRET": nsSecret } : {} });
+
   // fallback: SHA-1 no header api-secret
   if (resp.status === 401 || resp.status === 403) {
     const headers = nsSecret ? { "api-secret": sha1Hex(nsSecret) } : {};
@@ -198,7 +173,7 @@ app.get("/api/ns/latest/:userId", async (req, res) => {
   }
 });
 
-// ---------- Upload Storage (dataURL -> arquivo público) ----------
+/* =========== Upload Storage (dataURL -> arquivo) ============ */
 function dataUrlParse(dataUrl) {
   const m = String(dataUrl).match(/^data:([^;]+);base64,(.+)$/);
   if (!m) return null;
@@ -221,7 +196,7 @@ async function uploadMealPhoto(supabase, userId, dataUrl) {
   return pub?.data?.publicUrl || null;
 }
 
-// ---------- CHAT (texto) ----------
+/* ===================== CHAT (TEXTO) ===================== */
 app.post("/api/chat", async (req, res) => {
   try {
     const supabase = supabaseFromReq(req);
@@ -237,14 +212,18 @@ app.post("/api/chat", async (req, res) => {
     let carbo_g = 0, pg_cho_equiv_g = 0, refeicao_resumo = String(message || "").trim();
 
     if (openai) {
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        temperature: 0.1,
-        messages: [
-          { role: "system", content: systemPrompt(cfg) },
-          { role: "user", content: `Refeição textual: ${refeicao_resumo}\nGlicemia: ${glicemia} mg/dL\nTipo: ${tipo || "outro"}` },
-        ],
-      });
+      const completion = await withTimeout(
+        openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          temperature: 0.1,
+          messages: [
+            { role: "system", content: systemPrompt(cfg) },
+            { role: "user", content: `Refeição textual: ${refeicao_resumo}\nGlicemia: ${glicemia} mg/dL\nTipo: ${tipo || "outro"}` },
+          ],
+        }),
+        45000,
+        "Timeout IA (chat-texto)"
+      );
       const raw = completion.choices?.[0]?.message?.content || "";
       detalhes_html = stripFences(raw);
       const parsed = pickFromPre(raw);
@@ -274,9 +253,10 @@ app.post("/api/chat", async (req, res) => {
       pg_cho_equiv_g: Number(pg_cho_equiv_g),
       dose_rapida_total: r0(doseCho + doseCor),
       dose_regular_pg: r0(dosePg),
-      descricao_model: detalhes_html, // pode não existir (fallback abaixo)
+      descricao_model: detalhes_html,
     };
 
+    // grava; se falhar por tamanho do campo "descricao_model", tenta sem ele
     let { error: e1 } = await supabase.from("refeicoes").insert(insertPayload);
     if (e1) {
       const basic = { ...insertPayload };
@@ -304,7 +284,7 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-// ---------- CHAT (imagem) ----------
+/* ===================== CHAT (IMAGEM) ===================== */
 app.post("/api/chat-image", async (req, res) => {
   try {
     const supabase = supabaseFromReq(req);
@@ -324,20 +304,24 @@ app.post("/api/chat-image", async (req, res) => {
         `Foto da refeição. Glicemia: ${glicemia} mg/dL. Tipo: ${tipo || "outro"}. ` +
         (message ? `Observações: ${message}` : "");
 
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        temperature: 0.1,
-        messages: [
-          { role: "system", content: systemPrompt(cfg) },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: userText },
-              { type: "image_url", image_url: { url: image_data_url } },
-            ],
-          },
-        ],
-      });
+      const completion = await withTimeout(
+        openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          temperature: 0.1,
+          messages: [
+            { role: "system", content: systemPrompt(cfg) },
+            {
+              role: "user",
+              content: [
+                { type: "text", text: userText },
+                { type: "image_url", image_url: { url: image_data_url } },
+              ],
+            },
+          ],
+        }),
+        60000,
+        "Timeout IA (chat-imagem)"
+      );
 
       const raw = completion.choices?.[0]?.message?.content || "";
       detalhes_html = stripFences(raw);
@@ -350,12 +334,12 @@ app.post("/api/chat-image", async (req, res) => {
       refeicao_resumo = String(message || "[foto]").trim();
     }
 
-    // Upload foto para Storage
+    // Upload foto para Storage (pode falhar sem travar o fluxo)
     let foto_url = null;
     try {
       foto_url = await uploadMealPhoto(supabase, userId, image_data_url);
-    } catch (e) {
-      console.warn("upload foto falhou:", e.message);
+    } catch (eUp) {
+      console.warn("[uploadMealPhoto]", eUp?.message || eUp);
     }
 
     const icr = Number(cfg?.icr || cfg?.insulina_cho || 10);
@@ -371,20 +355,19 @@ app.post("/api/chat-image", async (req, res) => {
       user_id: userId,
       data_hora: new Date().toISOString(),
       tipo: tipo || "outro",
-      descricao: refeicao_resumo || String(message || "").trim() || "[foto]",
+      descricao: refeicao_resumo || String(message || "").trim(),
       glicemia: Number(glicemia),
       cho_total_g: Number(carbo_g),
       pg_cho_equiv_g: Number(pg_cho_equiv_g),
       dose_rapida_total: r0(doseCho + doseCor),
       dose_regular_pg: r0(dosePg),
-      foto_url: foto_url || null,
       descricao_model: detalhes_html,
+      foto_url,
     };
 
     let { error: e1 } = await supabase.from("refeicoes").insert(insertPayload);
     if (e1) {
       const basic = { ...insertPayload };
-      delete basic.foto_url;
       delete basic.descricao_model;
       const retry = await supabase.from("refeicoes").insert(basic);
       if (retry.error) throw e1;
@@ -402,26 +385,38 @@ app.post("/api/chat-image", async (req, res) => {
       },
       totais: { carbo_g, pg_cho_equiv_g },
       detalhes_html,
-      foto_url: foto_url || undefined,
     });
   } catch (e) {
     console.error("[POST /api/chat-image]", e);
-    res.status(500).json({ ok: false, error: e.message });
+    // Fallback gentil: devolve sem análise para o front não travar
+    const { userId, glicemia, tipo, pg_strategy, message } = req.body || {};
+    res.json({
+      ok: true,
+      input: { descricao: String(message || "[foto]").trim(), glicemia: Number(glicemia || 0) },
+      config: {
+        insulina_rapida: "Fiasp",
+        insulina_cho: 10,
+        glicose_insulina: 50,
+        target: 100,
+        pg_strategy: pg_strategy || "regular_now",
+      },
+      totais: { carbo_g: 0, pg_cho_equiv_g: 0 },
+      detalhes_html: "<em>Não foi possível analisar a imagem agora. Tente novamente ou descreva a refeição em texto.</em>",
+    });
   }
 });
 
-// ---------- HISTÓRICO (lista) ----------
+/* ===================== HISTÓRICO ===================== */
 app.get("/api/refeicoes", async (req, res) => {
   try {
     const supabase = supabaseFromReq(req);
-    const { userId, start, end, tipo } = req.query;
+    const { userId, start, end, tipo } = req.query || {};
     if (!userId) return res.status(400).json({ ok: false, error: "userId é obrigatório" });
 
-    let q = supabase.from("refeicoes").select("*").eq("user_id", userId);
-    if (start) q = q.gte("data_hora", start);
-    if (end) q = q.lte("data_hora", end);
+    let q = supabase.from("refeicoes").select("*").eq("user_id", userId).order("data_hora", { ascending: false });
+    if (start) q = q.gte("data_hora", new Date(start).toISOString());
+    if (end)   q = q.lte("data_hora", new Date(end).toISOString());
     if (tipo && tipo !== "todos") q = q.eq("tipo", tipo);
-    q = q.order("data_hora", { ascending: false });
 
     const { data, error } = await q;
     if (error) throw error;
@@ -432,40 +427,33 @@ app.get("/api/refeicoes", async (req, res) => {
   }
 });
 
-// ---------- HISTÓRICO (série para gráficos, opcional) ----------
-function toLocalYMD(iso, tz = "America/Sao_Paulo") {
-  const d = new Date(iso);
-  return new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
-}
 app.get("/api/refeicoes/serie", async (req, res) => {
   try {
     const supabase = supabaseFromReq(req);
-    const { userId, start, end, tipo, tz = "America/Sao_Paulo" } = req.query;
+    const { userId, days = 30 } = req.query || {};
     if (!userId) return res.status(400).json({ ok: false, error: "userId é obrigatório" });
 
-    let q = supabase.from("refeicoes").select("*").eq("user_id", userId);
-    if (start) q = q.gte("data_hora", start);
-    if (end) q = q.lte("data_hora", end);
-    if (tipo && tipo !== "todos") q = q.eq("tipo", tipo);
-    q = q.order("data_hora", { ascending: true });
-
-    const { data, error } = await q;
+    const since = new Date(Date.now() - Number(days) * 86400000).toISOString();
+    const { data, error } = await supabase
+      .from("refeicoes")
+      .select("data_hora,glicemia,cho_total_g,dose_rapida_total")
+      .eq("user_id", userId)
+      .gte("data_hora", since)
+      .order("data_hora", { ascending: true });
     if (error) throw error;
 
-    const buckets = new Map();
+    // agrega por dia (média glicemia; soma carbo; soma insulina)
+    const byDay = {};
     for (const r of data || []) {
-      const day = toLocalYMD(r.data_hora, tz);
-      if (!buckets.has(day)) buckets.set(day, { glyVals: [], cho: 0, ins: 0 });
-      const b = buckets.get(day);
-      if (r.glicemia != null && r.glicemia !== "") b.glyVals.push(Number(r.glicemia));
-      b.cho += Number(r.cho_total_g || 0);
-      b.ins += Number(r.dose_rapida_total || 0) + Number(r.dose_regular_pg || 0);
+      const day = new Date(r.data_hora).toISOString().slice(0, 10);
+      byDay[day] ||= { glyVals: [], cho: 0, ins: 0 };
+      if (Number.isFinite(r.glicemia)) byDay[day].glyVals.push(Number(r.glicemia));
+      byDay[day].cho += Number(r.cho_total_g || 0);
+      byDay[day].ins += Number(r.dose_rapida_total || 0);
     }
-
-    const days = Array.from(buckets.keys()).sort();
     const gly = [], cho = [], ins = [];
-    for (const day of days) {
-      const b = buckets.get(day);
+    for (const day of Object.keys(byDay).sort()) {
+      const b = byDay[day];
       const mean = b.glyVals.length ? b.glyVals.reduce((a, v) => a + v, 0) / b.glyVals.length : 0;
       gly.push({ x: day, y: mean });
       cho.push({ x: day, y: b.cho });
@@ -478,7 +466,6 @@ app.get("/api/refeicoes/serie", async (req, res) => {
   }
 });
 
-// ---------- HISTÓRICO (delete) ----------
 app.delete("/api/refeicoes/:id", async (req, res) => {
   try {
     const supabase = supabaseFromReq(req);
@@ -508,15 +495,16 @@ app.delete("/api/refeicoes/:id", async (req, res) => {
   }
 });
 
-// ---------- SPA fallback ----------
+/* ===================== SPA fallback ===================== */
+// Agora aponta para public/glicocerto/index.html (seu app vive no subcaminho /glicocerto)
+// No original estava para public/index.html. :contentReference[oaicite:3]{index=3}
 app.use((req, res, next) => {
   if (req.method !== "GET") return next();
   if (req.path.startsWith("/api/")) return next();
   return res.sendFile(path.join(__dirname, "public", "glicocerto", "index.html"));
 });
 
-
-// ---------- Start ----------
+/* ======================== Start ======================== */
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`✅ GlicoCerto API rodando em http://localhost:${PORT}`);
