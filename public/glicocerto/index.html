@@ -105,8 +105,9 @@
     th { background: var(--thead); position: sticky; top:0; z-index:1; }
     .btn-del { background:#e11d48; color:#fff; border:none; padding:8px 10px; border-radius:10px; cursor:pointer; min-height:40px; }
 
+    .details-clean .table-wrap {max-width: 100%;overflow-x: auto;-webkit-overflow-scrolling: touch;}  
     .details-clean { border:1px solid var(--border); border-radius:10px; padding:10px; background:var(--card); }
-    .details-clean .gc-table{ width:100%; border-collapse:collapse; font-size:14px; }
+    .details-clean .gc-table { width:100%; border-collapse:collapse; font-size:14px; }
     .details-clean .gc-table th, .details-clean .gc-table td{ border:1px solid var(--border); padding:6px 8px; text-align:left; }
     .details-clean .gc-table th{ background:var(--thead); }
 
@@ -239,7 +240,7 @@
           <div>
             <label>Foto da refeição (opcional)</label>
             <div class="row">
-              <input type="file" id="foto" accept="image/*" capture="environment">
+              <input id="foto" type="file" accept="image/*">
               <img id="previewFoto" alt="" style="display:none; max-width:160px; border:1px solid #eee; border-radius:8px;">
               <button class="menu-btn" id="btnLimparFoto" type="button" style="display:none">Remover foto</button>
             </div>
@@ -594,20 +595,110 @@
     }
 
     /* ===== Chat ===== */
-    document.getElementById('btnEnviar').onclick=async()=>{ 
-      if(!USER_ID){ alert('Faça login para enviar.'); return; } 
-          const resumo=document.getElementById('resumo'); 
-          const detalhesBox=document.getElementById('detalhesBox'); 
-          const detalhesHTML=document.getElementById('detalhesHTML'); 
-          const mensagem=document.getElementById('mensagem').value.trim(); 
-          const glicemia=Number(document.getElementById('glicemia').value); 
-          const tipo=document.getElementById('tipo_refeicao').value||'outro'; 
-          const strat=document.getElementById('pg_strategy').value; resumo.textContent='Calculando...'; detalhesBox.style.display='none'; detalhesHTML.innerHTML=''; try{ const h=await getAuthHeaders(); const temFoto=!!(document.getElementById('foto')?.files?.length); let payload={ userId:USER_ID, glicemia, pg_strategy:strat, tipo }; let url='/api/chat'; if(temFoto){ const f=document.getElementById('foto').files[0]; const dataUrl=await downscaleToDataURL(f, 1024, 1024, 'image/jpeg', 0.7); url='/api/chat-image'; payload.image_data_url=dataUrl; if(mensagem) payload.message=mensagem; } else { payload.message=mensagem; } const r=await fetch(url,{method:'POST', headers:{'Content-Type':'application/json', ...h}, body:JSON.stringify(payload)}); const d=await r.json(); if(!d.ok){ resumo.textContent='Erro: '+(d.error||'Falha no cálculo.'); return; } const t=d.totais||{}; const cho_total=Number(t.carbo_g||0); const pg_cho_eq=Number(t.pg_cho_equiv_g||0); const icr=Number(d.config?.insulina_cho||10); const isf=Number(d.config?.glicose_insulina||50); const alvo=Number(d.config?.target||100); const glicVal=Number(d.input?.glicemia ?? glicemia); const stratUsed=(d.config?.pg_strategy||'regular_now'); const doseCho=cho_total/icr; const doseCor=Math.max(0,(glicVal-alvo)/isf); const dosePg=(stratUsed==='regular_now')?(pg_cho_eq/icr):0; const rint=(n)=>Math.round(Number(n||0)); const choU_i=rint(doseCho); const corU_i=rint(doseCor); const pgU_i=rint(dosePg); const totalFiasp_i=rint(doseCho+doseCor); const insRapida=(d.config?.insulina_rapida||'Fiasp').trim(); const refeicaoTxt=(d.input?.descricao||mensagem||'[foto]').replace(/\s+/g,' ').trim(); let linhas=[]; linhas.push(`Para a refeição “${refeicaoTxt}” (glicemia: ${glicVal} mg/dL):`); linhas.push(`• ${choU_i}U + ${corU_i}U de ${insRapida.toUpperCase()} para carboidratos e correção`); if(stratUsed==='regular_now'){ linhas.push(`• ${pgU_i}U de Insulina Regular (R) para proteína e gordura.`); linhas.push(`• Total: ${totalFiasp_i}U ${insRapida.toUpperCase()} ; ${pgU_i}U Regular`); } else { linhas.push(`• Proteína e gordura: não aplicar agora; ver detalhes.`); linhas.push(`• Total imediato: ${totalFiasp_i}U ${insRapida.toUpperCase()}`); } resumo.innerHTML = `<strong>${linhas.shift()}</strong>\n${linhas.join('\n')}`; 
-          const raw = d.detalhes_html || '';
-          const clean = raw.replace(/```html|```/g, '').replace(/<pre[\s\S]*?<\/pre>/gi, '').trim();
-          detalhesHTML.innerHTML= clean || '<em>Sem detalhes técnicos disponíveis.</em>';
-          detalhesBox.style.display='block'; detalhesBox.open=false; 
-        }catch(e){ console.error(e); resumo.textContent='Erro ao conectar com o servidor.'; } };
+    document.getElementById('btnEnviar').onclick = async () => {
+  if (!USER_ID) { alert('Faça login para enviar.'); return; }
+
+  const resumo       = document.getElementById('resumo');
+  const detalhesBox  = document.getElementById('detalhesBox');
+  const detalhesHTML = document.getElementById('detalhesHTML');
+  const mensagem     = document.getElementById('mensagem').value.trim();
+  const glicemia     = Number(document.getElementById('glicemia').value);
+  const tipo         = document.getElementById('tipo_refeicao').value || 'outro';
+  const strat        = document.getElementById('pg_strategy').value;
+
+  resumo.textContent = 'Calculando...';
+  detalhesBox.style.display = 'none';
+  detalhesHTML.innerHTML = '';
+
+  try {
+    const h = await getAuthHeaders();
+
+    // monta payload base
+    const payload = { userId: USER_ID, glicemia, pg_strategy: strat, tipo };
+    if (mensagem) payload.message = mensagem;
+
+    // decide rota + trata foto (REDUZ PARA 300px)
+    let url = '/api/chat';
+    const temFoto = !!(document.getElementById('foto')?.files?.length);
+    if (temFoto) {
+      const f = document.getElementById('foto').files[0];
+          // >>> redução real para ~300px (qualidade 0.85)
+          const dataUrl = await downscaleToDataURL(f, 300, 0.85);
+          payload.image_data_url = dataUrl;
+          url = '/api/chat-image';
+        }
+
+        // timeout de 45s para evitar loop infinito
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 45_000);
+
+        const r = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...h },
+          body: JSON.stringify(payload),
+          signal: ctrl.signal
+        });
+
+        clearTimeout(timer);
+
+        const d = await r.json();
+        if (!d.ok) {
+          resumo.textContent = 'Erro: ' + (d.error || 'Falha no cálculo.');
+          return;
+        }
+
+        // ===== render do resumo (mantendo sua lógica) =====
+        const t          = d.totais || {};
+        const cho_total  = Number(t.carbo_g || 0);
+        const pg_cho_eq  = Number(t.pg_cho_equiv_g || 0);
+        const icr        = Number(d.config?.insulina_cho || 10);
+        const isf        = Number(d.config?.glicose_insulina || 50);
+        const alvo       = Number(d.config?.target || 100);
+        const glicVal    = Number(d.input?.glicemia ?? glicemia);
+        const stratUsed  = (d.config?.pg_strategy || 'regular_now');
+        const doseCho    = cho_total / icr;
+        const doseCor    = Math.max(0, (glicVal - alvo) / isf);
+        const dosePg     = (stratUsed === 'regular_now') ? (pg_cho_eq / icr) : 0;
+        const rint       = (n) => Math.round(Number(n || 0));
+        const choU_i     = rint(doseCho);
+        const corU_i     = rint(doseCor);
+        const pgU_i      = rint(dosePg);
+        const totalFiasp_i = rint(doseCho + doseCor);
+        const insRapida  = (d.config?.insulina_rapida || 'Fiasp').trim();
+        const refeicaoTxt= (d.input?.descricao || mensagem || '[foto]').replace(/\s+/g,' ').trim();
+
+        let linhas = [];
+        linhas.push(`Para a refeição “${refeicaoTxt}” (glicemia: ${glicVal} mg/dL):`);
+        linhas.push(`• ${choU_i}U + ${corU_i}U de ${insRapida.toUpperCase()} para carboidratos e correção`);
+        if (stratUsed === 'regular_now') {
+          linhas.push(`• ${pgU_i}U de Insulina Regular (R) para proteína e gordura.`);
+          linhas.push(`• Total: ${totalFiasp_i}U ${insRapida.toUpperCase()} ; ${pgU_i}U Regular`);
+        } else {
+          linhas.push(`• Proteína e gordura: não aplicar agora; ver detalhes.`);
+          linhas.push(`• Total imediato: ${totalFiasp_i}U ${insRapida.toUpperCase()}`);
+        }
+        resumo.innerHTML = `<strong>${linhas.shift()}</strong>\n${linhas.join('\n')}`;
+
+        // ===== detalhes técnicos (limpa cercas e remove JSON) =====
+        const raw   = d.detalhes_html || '';
+        const clean = raw
+          .replace(/```html|```/gi, '')
+          .replace(/<pre[\s\S]*?<\/pre>/gi, '')
+          .trim();
+
+        detalhesHTML.innerHTML = clean || '<em>Sem detalhes técnicos disponíveis.</em>';
+        detalhesBox.style.display = 'block';
+        detalhesBox.open = false;
+      } catch (e) {
+        console.error(e);
+        if (e.name === 'AbortError') {
+          resumo.textContent = 'Tempo esgotado processando a imagem. Tente outra foto (iluminação melhor).';
+        } else {
+          resumo.textContent = 'Erro ao conectar com o servidor.';
+        }
+      }
+    };
+
 
     /* ===== Nightscout no topo (badge) + auto-preencher chat ===== */
     const NS_REFRESH_MS=240000; let nsHeaderTimer=null;
@@ -696,6 +787,28 @@
     });
 
     initSupabase();
+    function imgToCanvas(img, maxSide){
+      const r = img.width/img.height;
+      let w = img.width, h = img.height;
+      if (w>h && w>maxSide){ w=maxSide; h=Math.round(w/r); }
+      else if (h>=w && h>maxSide){ h=maxSide; w=Math.round(h*r); }
+      const cv = document.createElement('canvas'); cv.width=w; cv.height=h;
+      cv.getContext('2d').drawImage(img,0,0,w,h);
+      return cv;
+    }
+    function downscaleToDataURL(file, maxSide=300, quality=0.85){
+      return new Promise((resolve,reject)=>{
+        const fr = new FileReader();
+        fr.onload = ()=>{
+          const img = new Image();
+          img.onload = ()=> resolve(imgToCanvas(img,maxSide).toDataURL('image/jpeg',quality));
+          img.onerror = reject;
+          img.src = fr.result;
+        };
+        fr.onerror = reject;
+        fr.readAsDataURL(file);
+      });
+    }
   </script>
   <script>
     // 1) Registrar o Service Worker

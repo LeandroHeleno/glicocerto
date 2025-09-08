@@ -33,7 +33,7 @@ app.use(cors());
 app.use(express.json({ limit: "25mb" }));
 app.use(express.urlencoded({ extended: true, limit: "25mb" }));
 app.use(express.static(path.join(__dirname, "public"))); // serve ./public
-//                                                         ^ mantém igual ao seu original (está ok). :contentReference[oaicite:2]{index=2}
+//     ^ mantém igual ao seu original (está ok). :contentReference[oaicite:2]{index=2}
 
 // SDKs
 const openai = process.env.OPENAI_API_KEY
@@ -97,18 +97,19 @@ function systemPrompt(cfg) {
 
   <div class="details-clean">
     <h3>🍽️ Refeição informada</h3>
-    <table class="gc-table">
-      <thead>
-        <tr><th>Alimento</th><th>Quantidade</th><th>CHO estimado (SBD)</th><th>kcal aprox</th></tr>
-      </thead>
-      <tbody>
-        <!-- Uma linha por item identificado -->
-        <!-- Exemplo:
-        <tr><td>Arroz branco</td><td>100g</td><td>28g</td><td>~130 kcal</td></tr>
-        -->
-      </tbody>
-    </table>
-
+    <div class="table-wrap">
+      <table class="gc-table">
+        <thead>
+          <tr><th>Alimento</th><th>Quantidade</th><th>CHO estimado (SBD)</th><th>kcal aprox</th></tr>
+        </thead>
+        <tbody>
+          <!-- Uma linha por item identificado -->
+          <!-- Exemplo:
+          <tr><td>Arroz branco</td><td>100g</td><td>28g</td><td>~130 kcal</td></tr>
+          -->
+        </tbody>
+      </table>
+    </div>
     <h3>📊 Totais</h3>
     <ul>
       <!-- Escreva a soma mostrando a conta -->
