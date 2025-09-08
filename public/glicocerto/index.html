@@ -447,7 +447,7 @@
     </div>
   </main>
   <footer style="text-align:center; font-size:12px; color:var(--muted); padding:12px; margin-top:20px;">
-    @upbots v1.8.6
+    @upbots v1.8.8
   </footer>
   <nav class="bottom-nav" id="bottomNav" aria-label="Navegação principal">
     <button data-tab="paciente" id="bnPaciente" class="active"><span class="icon">👤</span><span>Paciente</span></button>
@@ -753,9 +753,9 @@
         const h=await getAuthHeaders();
         const params=new URLSearchParams({ userId:USER_ID });
         const ini=document.getElementById('f_inicio').value; const fim=document.getElementById('f_fim').value; const tipo=document.getElementById('f_tipo').value;
-        if(ini) params.set('start', new Date(ini+'T00:00:00').toISOString());
-        if(fim) params.set('end', new Date(fim+'T23:59:59.999').toISOString());
-        if(tipo) params.set('tipo', tipo);
+          if(ini) params.set('start', new Date(ini+'T00:00:00').toISOString());
+          if(fim) params.set('end', new Date(fim+'T23:59:59.999').toISOString());
+          if(tipo && tipo !== 'todos') params.set('tipo', tipo);
         const r=await fetch('/api/refeicoes?'+params.toString(),{headers:{...h}});
         const j=await r.json();
         if(!j.ok){ tbody.innerHTML=`<tr><td colspan="10">${j.error||'Falha ao carregar.'}</td></tr>`; return; }
@@ -788,9 +788,93 @@
     // ===== Histórico (filtros + render + XLSX) =====
     let histCache = [];
 
+    document.getElementById('btnBaixarXlsx')?.addEventListener('click', ()=>{
+      const tbody = document.querySelector('#tHistorico tbody');
+      const ths   = [...document.querySelectorAll('#tHistorico thead th')].map(th=>th.textContent.trim());
+      const headers = ths.filter(h => h.toLowerCase() !== 'ações');
+
+      const trs = [...(tbody?.querySelectorAll('tr') || [])];
+      // descarta linhas de estado
+      const linhasValidas = trs.filter(tr => {
+        const t0 = tr.cells?.[0]?.innerText?.trim() || '';
+        return t0 && t0 !== 'Sem registros.' && t0 !== 'Carregando...';
+      });
+
+      if(linhasValidas.length === 0){
+        alert('Nada a exportar com os filtros atuais.');
+        return;
+      }
+
+      const data = [headers];
+      linhasValidas.forEach(tr=>{
+        const tds = [...tr.querySelectorAll('td')];
+        const fotoLink = tds[8]?.querySelector('a')?.href || ''; // 9ª coluna (Foto)
+        // monta array sem a última coluna (Ações)
+        const row = [
+          tds[0]?.innerText.trim() || '',
+          tds[1]?.innerText.trim() || '',
+          tds[2]?.innerText.trim() || '',
+          tds[3]?.innerText.trim() || '',
+          tds[4]?.innerText.trim() || '',
+          tds[5]?.innerText.trim() || '',
+          tds[6]?.innerText.trim() || '',
+          tds[7]?.innerText.trim() || '',
+          fotoLink
+        ];
+        data.push(row);
+      });
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(data);
+      XLSX.utils.book_append_sheet(wb, ws, 'Historico');
+      XLSX.writeFile(wb, 'historico.xlsx');
+    });
+
       
     // listeners de filtro
-    
+    function fmtDateInputLocal(d){
+      // Gera YYYY-MM-DD respeitando o fuso local (evita “amanhã” por offset)
+      const off = d.getTimezoneOffset();
+      const d2  = new Date(d.getTime() - off*60000);
+      return d2.toISOString().slice(0,10);
+    }
+
+    document.getElementById('btnFiltrar')?.addEventListener('click', ()=> {
+      carregarHistorico();
+    });
+
+    document.getElementById('btnHoje')?.addEventListener('click', ()=>{
+      const hoje = new Date();
+      const ymd  = fmtDateInputLocal(hoje);
+      const i = document.getElementById('f_inicio');
+      const f = document.getElementById('f_fim');
+      if(i) i.value = ymd;
+      if(f) f.value = ymd;
+      carregarHistorico();
+    });
+
+    document.getElementById('btnSemana')?.addEventListener('click', ()=>{
+      const hoje = new Date();
+      const ini  = new Date();
+      ini.setDate(hoje.getDate() - 6); // últimos 7 dias (inclusivo)
+      const i = document.getElementById('f_inicio');
+      const f = document.getElementById('f_fim');
+      if(i) i.value = fmtDateInputLocal(ini);
+      if(f) f.value = fmtDateInputLocal(hoje);
+      carregarHistorico();
+    });
+
+    document.getElementById('btnMes')?.addEventListener('click', ()=>{
+      const hoje = new Date();
+      const ini  = new Date();
+      ini.setDate(hoje.getDate() - 29); // últimos 30 dias (inclusivo)
+      const i = document.getElementById('f_inicio');
+      const f = document.getElementById('f_fim');
+      if(i) i.value = fmtDateInputLocal(ini);
+      if(f) f.value = fmtDateInputLocal(hoje);
+      carregarHistorico();
+    });
+
 
     document.addEventListener('click', async (ev) => {
       const t=ev.target;
