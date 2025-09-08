@@ -11,7 +11,7 @@
   <link rel="apple-touch-icon" href="/glicocerto/icons/icon-192.png">
   <title>GlicoCerto</title>
   <style>
-    :root { --brand:#2aa775; --brand-700:#248c62; --bg:#f6f6f6; --text:#1f2937; --muted:#6b7280; --card:#ffffff; --border:#e7e7e7; --thead:#f5f5f5; }
+    :root { --brand:#1565c0;; --brand-700:#0d47a1; --bg:#f6f6f6; --text:#1f2937; --muted:#6b7280; --card:#ffffff; --border:#e7e7e7; --thead:#f5f5f5; }
     :root[data-theme="dark"]{ --bg:#0b0b0c; --card:#111114; --text:#e5e7eb; --border:#25262b; --muted:#9ca3af; --thead:#141519; }
 
     :root{ --input-bg:#ffffff; --input-text:#111; --input-border:#dddddd; }
@@ -69,13 +69,59 @@
     .tab-btn.active { background: var(--brand); color:#fff; border-color: var(--brand); }
 
     .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow: 0 1px 2px rgba(0,0,0,.03); margin-bottom:12px; }
+    /* --- Subcards do Chat --- */
+    .subcards { display:grid; gap:12px; }
+    @media (min-width: 720px){
+      .subcards { grid-template-columns: 1fr 1fr; }
+    }
+    .subcard {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: 0 1px 1px rgba(0,0,0,.02);
+    }
+
+    .subcard h3{
+      margin:0 0 8px;
+      font-size:14px;
+      font-weight:700;
+      display:flex; align-items:center; gap:8px;
+    }
+    .subcard h3 .step{ 
+      width:22px; height:22px; border-radius:999px; 
+      display:grid; place-items:center; 
+      background:var(--brand); color:#fff; font-size:12px;
+    }
+
+    .field + .hint{ margin-top:6px; font-size:12px; color:var(--muted); }
+
+    .actions-sticky{
+      position: sticky; bottom: 0; z-index: 5;
+      background: var(--card);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:12px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+    }
+
+    /* chips/resumos */
+    .kpi{
+      display:flex; gap:8px; flex-wrap:wrap;
+    }
+    .kpi .chip{
+      background: var(--thead);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size:12px; color:var(--muted);
+    }
 
     .grid { display:grid; grid-template-columns: 1fr; gap:12px; }
     .grid-3 { display:grid; grid-template-columns: 1fr; gap:12px; }
     @media (min-width: 720px){
       main { max-width: 900px; }
       .grid { grid-template-columns: repeat(2, minmax(180px,1fr)); }
-      .grid-3 { grid-template-columns: repeat(3, minmax(160px,1fr)); }
+      .grid-3 { grid-template-columns: repeat(4, minmax(160px,1fr)); }
     }
     @media (min-width: 1120px){ main { max-width: 1100px; } }
 
@@ -229,66 +275,86 @@
       <!-- Chat -->
       <section id="chat" class="card" style="display:none">
         <h2 style="margin-top:0">Chat de Refeição</h2>
+          <div id="pgNote" class="note" style="display:none"></div>
 
-        <div id="pgNote" class="note" style="display:none"></div>
+          <div class="subcards">
+            <!-- 1. Descrição da refeição -->
+            <div class="subcard" style="grid-column:1/-1">
+              <h3><span class="step">1</span> Descreva a refeição</h3>
+              <div class="field">
+                <label>Refeição (ex.: 80g arroz, 50g feijão, 1 ovo)</label>
+                <textarea id="mensagem" placeholder="Descreva com peso/medida e tipos" required></textarea>
+              </div>
+              <div class="hint">Quanto mais detalhado, melhor o cálculo.</div>
+            </div>
 
-        <div class="grid col-1">
-          <div>
-            <label>Refeição (ex.: 80g arroz, 50g feijão, 1 ovo)</label>
-            <textarea id="mensagem" placeholder="Descreva com peso/medida e tipos" required></textarea>
-          </div>
-          <div>
-            <label>Foto da refeição (opcional)</label>
-            <!-- Botões para o usuário escolher -->
+            <!-- 2. Foto (opcional) -->
+            <div class="subcard">
+              <h3><span class="step">2</span> Foto (opcional)</h3>
               <div class="row" style="gap:6px; flex-wrap:wrap;">
-                <button type="button" class="menu-btn" id="btnFotoCamera" title="Tirar foto">
-                  📷 Câmera
-                </button>
-                <button type="button" class="menu-btn" id="btnFotoGaleria" title="Escolher da galeria">
-                  📁 Galeria
-                </button>                
+                <button type="button" class="menu-btn" id="btnFotoCamera" title="Tirar foto">📷 Câmera</button>
+                <button type="button" class="menu-btn" id="btnFotoGaleria" title="Escolher da galeria">📁 Galeria</button>
                 <span id="fotoNome" class="muted" style="min-width:140px;"></span>
               </div>
-              <!-- Inputs escondidos: um força câmera, outro abre seletor/galeria -->
               <input id="fotoCamera"  type="file" accept="image/*" capture="environment" style="display:none">
               <input id="fotoGaleria" type="file" accept="image/*"                      style="display:none">
-            <div class="muted">Você pode enviar só a foto, só o texto, ou ambos.</div>
+              <!-- Miniatura da foto -->
+              <img id="previewFoto"
+              alt="pré-visualização"
+              style="display:none;margin-top:8px;width:120px;height:120px;object-fit:cover;border-radius:10px;border:1px solid var(--border)">
+
+              <div class="hint">Você pode enviar só a foto, só o texto, ou ambos.</div>
+            </div>
+
+            <!-- 3. Dados rápidos -->
+            <div class="subcard">
+              <h3><span class="step">3</span> Dados rápidos</h3>
+              <div class="grid">
+                <div>
+                  <label>Tipo da refeição</label>
+                  <select id="tipo_refeicao">
+                    <option value="cafe">Café</option>
+                    <option value="almoco">Almoço</option>
+                    <option value="lanche">Lanche</option>
+                    <option value="jantar">Jantar</option>
+                    <option value="ceia">Ceia</option>
+                    <option value="outro" selected>Outro</option>
+                  </select>
+                </div>
+                <div>
+                  <label>Glicemia atual (mg/dL) <span class="muted" id="glicemiaSource"></span></label>
+                  <input id="glicemia" type="number" inputmode="numeric" step="1" placeholder="Ex.: 160" required/>
+                  <div id="glicErr" class="muted" style="display:none;color:#b91c1c">Informe a glicemia (número válido).</div>
+                </div>
+              </div>
+
+              <!-- resumos compactos (preenchemos depois que o chat responde) -->
+              <div class="kpi" style="margin-top:10px;">
+                <span class="chip" id="kpiCho"    style="display:none"></span>
+                <span class="chip" id="kpiPg"     style="display:none"></span>
+                <span class="chip" id="kpiRapida" style="display:none"></span>
+                <span class="chip" id="kpiRegular"style="display:none"></span>
+              </div>
+            </div>
+
+            <!-- 4. Ações -->
+            <div class="actions-sticky">
+              <button class="btn" id="btnEnviar" disabled>Enviar</button>
+              <button class="menu-btn" id="btnNovo" type="button" title="Novo chat">Novo</button>
+              <span class="muted">Usa as configurações salvas do paciente.</span>
+            </div>
+
+            <!-- 5. Resultado -->
+            <div class="subcard" style="grid-column:1/-1">
+              <h3><span class="step">✓</span> Resultado</h3>
+              <div id="resumo" class="resumo">Aguardando…</div>
+              <details id="detalhesBox" style="display:none; margin-top:10px;">
+                <summary>ver detalhes técnicos</summary>
+                <div id="detalhesHTML" class="details-clean"></div>
+              </details>
+              <div class="disclaimer" style="margin-top:8px;">⚠️ Este app não substitui orientação médica.</div>
+            </div>
           </div>
-        </div>
-
-        <div class="grid">
-          <div>
-            <label>Tipo da refeição</label>
-            <select id="tipo_refeicao">
-              <option value="cafe">Café</option>
-              <option value="almoco">Almoço</option>
-              <option value="lanche">Lanche</option>
-              <option value="jantar">Jantar</option>
-              <option value="ceia">Ceia</option>
-              <option value="outro" selected>Outro</option>
-            </select>
-          </div>
-          <div>
-            <label>Glicemia atual (mg/dL) <span class="muted" id="glicemiaSource"></span></label>
-            <input id="glicemia" type="number" inputmode="numeric" step="1" placeholder="Ex.: 160" required/>
-            <div id="glicErr" class="muted" style="display:none;color:#b91c1c">Informe a glicemia (número válido).</div>
-          </div>
-        </div>
-
-        <div class="row" style="margin-top:10px; gap:8px;">
-          <button class="btn" id="btnEnviar" disabled>Enviar</button>
-          <button class="menu-btn" id="btnNovo" type="button" title="Novo chat">Novo</button>
-          <span class="muted">Usa as configurações salvas do paciente.</span>
-        </div>
-
-        <div id="resumo" class="resumo">Aguardando…</div>
-
-        <details id="detalhesBox" style="display:none">
-          <summary>ver detalhes técnicos</summary>
-          <div id="detalhesHTML" class="details-clean"></div>
-        </details>
-
-        <div class="disclaimer">⚠️ Este app não substitui orientação médica.</div>
       </section>
 
       <!-- Histórico -->
@@ -309,11 +375,11 @@
               <option value="outro">Outro</option>
             </select>
           </div>
+          <div class="row" style="margin-top:10px; gap:8px;">
+            <button class="btn" id="btnFiltrar">Filtrar</button>
+          </div>
         </div>
-
-        <div class="row" style="margin-top:10px; gap:8px;">
-          <button class="btn" id="btnFiltrar">Filtrar</button>
-        </div>
+       
         <div class="row" style="margin-top:10px; gap:8px;">
           <button class="btn" id="btnHoje">Hoje</button>
           <button class="btn" id="btnSemana">Últimos 7 dias</button>
@@ -447,7 +513,7 @@
     </div>
   </main>
   <footer style="text-align:center; font-size:12px; color:var(--muted); padding:12px; margin-top:20px;">
-    @upbots v1.8.8
+    @upbots v1.8.9
   </footer>
   <nav class="bottom-nav" id="bottomNav" aria-label="Navegação principal">
     <button data-tab="paciente" id="bnPaciente" class="active"><span class="icon">👤</span><span>Paciente</span></button>
@@ -527,15 +593,34 @@
     }
 
     async function doLogout(){
-      if(!SUPABASE) return;
+      if (!SUPABASE) return;
       await SUPABASE.auth.signOut();
-      stopNsHeaderTimer(); hideNsBadge();
-      document.getElementById('mensagem').value=''; document.getElementById('glicemia').value='';
+
+      stopNsHeaderTimer();
+      hideNsBadge();
+
+      // limpa campos básicos
+      const msg = document.getElementById('mensagem');
+      if (msg) msg.value = '';
+      const g  = document.getElementById('glicemia');
+      if (g) { g.value = ''; g.readOnly = false; }
+      const gsrc = document.getElementById('glicemiaSource');
+      if (gsrc) gsrc.textContent = '';
+
+      // limpa histórico
       document.querySelector('#tHistorico tbody')?.replaceChildren();
-      const f=document.getElementById('foto'); if(f) f.value='';
-      const p=document.getElementById('previewFoto'); if(p){ p.src=''; p.style.display='none'; }
-      document.getElementById('glicemia').readOnly=false; document.getElementById('glicemiaSource').textContent='';
+
+      // limpa fotos
+      const inFotoCamera  = document.getElementById('fotoCamera');
+      const inFotoGaleria = document.getElementById('fotoGaleria');
+      if (inFotoCamera)  inFotoCamera.value  = '';
+      if (inFotoGaleria) inFotoGaleria.value = '';
+
+      const previewFoto = document.getElementById('previewFoto');
+      if (previewFoto) { previewFoto.src = ''; previewFoto.style.display = 'none'; }
+
       FOTO_SELECIONADA = null;
+      const fotoNome = document.getElementById('fotoNome');
       if (fotoNome) fotoNome.textContent = '';
     }
 
@@ -601,17 +686,33 @@
     const inFotoCamera   = document.getElementById('fotoCamera');
     const inFotoGaleria  = document.getElementById('fotoGaleria');
     const fotoNome       = document.getElementById('fotoNome');
+    const previewFoto    = document.getElementById('previewFoto');
+
 
     btnFotoCamera.onclick  = () => inFotoCamera.click();
     btnFotoGaleria.onclick = () => inFotoGaleria.click();
 
     function handleFotoChange(ev){
       const file = ev.target.files && ev.target.files[0];
-      if (!file) return;
+      if (!file) {
+        FOTO_SELECIONADA = null;
+        if (fotoNome)   fotoNome.textContent = '';
+        if (previewFoto){ previewFoto.src=''; previewFoto.style.display='none'; }
+        validarCampos();
+        return;
+      }
       FOTO_SELECIONADA = file;
-      fotoNome.textContent = file.name || '1 foto selecionada';
+      if (fotoNome) fotoNome.textContent = file.name || '1 foto selecionada';
+
+      // Mostra miniatura (Object URL é leve e rápido)
+      if (previewFoto) {
+        previewFoto.src = URL.createObjectURL(file);
+        previewFoto.onload = () => URL.revokeObjectURL(previewFoto.src); // libera memória após carregar
+        previewFoto.style.display = 'block';
+      }
       validarCampos();
     }
+
     inFotoCamera.addEventListener('change', handleFotoChange);
     inFotoGaleria.addEventListener('change', handleFotoChange);
     /* ===== Chat ===== */
@@ -690,6 +791,23 @@
         }
         resumo.innerHTML = `<strong>${linhas.shift()}</strong>\n${linhas.join('\n')}`;
 
+        document.getElementById('kpiCho').style.display = 'inline-block';
+        document.getElementById('kpiCho').textContent   = `CHO: ${cho_total.toFixed(1)} g`;
+
+        document.getElementById('kpiPg').style.display  = 'inline-block';
+        document.getElementById('kpiPg').textContent    = `P+G (eq): ${pg_cho_eq.toFixed(1)} g`;
+
+        document.getElementById('kpiRapida').style.display = 'inline-block';
+        document.getElementById('kpiRapida').textContent   = `Rápida: ${totalFiasp_i} U`;
+
+        if (stratUsed === 'regular_now') {
+          document.getElementById('kpiRegular').style.display = 'inline-block';
+          document.getElementById('kpiRegular').textContent   = `Regular: ${pgU_i} U`;
+        } else {
+          document.getElementById('kpiRegular').style.display = 'none';
+        }
+
+
         // ==== detalhes técnicos (limpa cercas/JSON) ====
         const raw   = d.detalhes_html || '';
         const clean = raw.replace(/```html|```/gi,'').replace(/<pre[\s\S]*?<\/pre>/gi,'').trim();
@@ -733,16 +851,41 @@
 
     /* Botão “Novo chat” */
     document.getElementById('btnNovo')?.addEventListener('click', () => {
-      const msg=document.getElementById('mensagem'); if(msg) msg.value='';
-      const f=document.getElementById('foto'); const p=document.getElementById('previewFoto'); const rm=document.getElementById('btnLimparFoto');
-      if(f) f.value=''; if(p){ p.src=''; p.style.display='none'; } if(rm) rm.style.display='none';
-      document.getElementById('tipo_refeicao').value='outro';
-      const resumo=document.getElementById('resumo'); const detalhesBox=document.getElementById('detalhesBox'); const detalhesHTML=document.getElementById('detalhesHTML');
-      if(resumo) resumo.textContent='Aguardando…'; if(detalhesHTML) detalhesHTML.innerHTML=''; if(detalhesBox){ detalhesBox.style.display='none'; detalhesBox.open=false; }
-      refreshNSBadge(); validarCampos();
-      FOTO_SELECIONADA = null;
-      if (fotoNome) fotoNome.textContent = '';  
+      // texto da refeição
+      const msg = document.getElementById('mensagem');
+      if (msg) msg.value = '';
+
+      // limpa inputs de foto (câmera/galeria) e o preview
+      const inFotoCamera  = document.getElementById('fotoCamera');
+      const inFotoGaleria = document.getElementById('fotoGaleria');
+      const previewFoto   = document.getElementById('previewFoto');
+
+      if (inFotoCamera)  inFotoCamera.value  = '';
+      if (inFotoGaleria) inFotoGaleria.value = '';
+      if (previewFoto) { previewFoto.src = ''; previewFoto.style.display = 'none'; }
+
+      // limpa texto do nome da foto e estado interno
+      if (typeof FOTO_SELECIONADA !== 'undefined') FOTO_SELECIONADA = null;
+      const fotoNome = document.getElementById('fotoNome');
+      if (fotoNome) fotoNome.textContent = '';
+
+      // tipo da refeição
+      const tipo = document.getElementById('tipo_refeicao');
+      if (tipo) tipo.value = 'outro';
+
+      // resultado e detalhes
+      const resumo       = document.getElementById('resumo');
+      const detalhesBox  = document.getElementById('detalhesBox');
+      const detalhesHTML = document.getElementById('detalhesHTML');
+      if (resumo) resumo.textContent = 'Aguardando…';
+      if (detalhesHTML) detalhesHTML.innerHTML = '';
+      if (detalhesBox) { detalhesBox.style.display = 'none'; detalhesBox.open = false; }
+
+      // re-preenche glicemia do Nightscout (se houver) e revalida botão Enviar
+      refreshNSBadge();
+      validarCampos();
     });
+
 
     /* ===== Histórico ===== */
     function fmtData(iso){ try{ const dt=new Date(iso); return dt.toLocaleString(); }catch{ return iso; } }
