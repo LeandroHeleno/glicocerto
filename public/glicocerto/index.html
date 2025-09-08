@@ -447,7 +447,7 @@
     </div>
   </main>
   <footer style="text-align:center; font-size:12px; color:var(--muted); padding:12px; margin-top:20px;">
-    @upbots v1.8.3
+    @upbots v1.8.5
   </footer>
   <nav class="bottom-nav" id="bottomNav" aria-label="Navegação principal">
     <button data-tab="paciente" id="bnPaciente" class="active"><span class="icon">👤</span><span>Paciente</span></button>
@@ -532,8 +532,6 @@
       stopNsHeaderTimer(); hideNsBadge();
       document.getElementById('mensagem').value=''; document.getElementById('glicemia').value='';
       document.querySelector('#tHistorico tbody')?.replaceChildren();
-      const f=document.getElementById('foto'); if(f) f.value='';
-      const p=document.getElementById('previewFoto'); if(p){ p.src=''; p.style.display='none'; }
       document.getElementById('glicemia').readOnly=false; document.getElementById('glicemiaSource').textContent='';
       FOTO_SELECIONADA = null;
       if (fotoNome) fotoNome.textContent = '';
@@ -785,103 +783,46 @@
         });
       }catch(e){ console.error(e); tbody.innerHTML=`<tr><td colspan="10">Erro ao carregar.</td></tr>`; }
     }
-    // ===== Histórico (filtros + render + XLSX) =====
-    let histCache = [];
-
-    function renderHistorico(rows){
-      const tb = document.getElementById('histBody');
-      if (!tb) return;
-      tb.innerHTML = '';
-      for (const it of rows){
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${new Date(it.data_hora).toLocaleString()}</td>
-          <td>${(it.descricao||'').replace(/^\[foto\]\s*/i,'')}</td>
-          <td>${it.glicemia ?? ''}</td>
-          <td>${Number(it.cho_total_g||it.cho_total||it.cho||0).toFixed(1)}</td>
-          <td>${Number(it.pg_cho_equiv_g||it.pg_eq||0).toFixed(1)}</td>
-          <td>${Number(it.dose_rapida_total||it.dose_rapida||0).toFixed(1)}</td>
-          <td>${Number(it.dose_regular_pg||it.dose_regular||0).toFixed(1)}</td>
-          <td>${it.foto_url ? `<a href="${it.foto_url}" target="_blank" rel="noopener">📷</a>` : ''}</td>
-          <td><button class="btn-del" data-id="${it.id}">Excluir</button></td>
-        `;
-        tb.appendChild(tr);
-      }
-    }
-
-    async function fetchHistorico(){
-      // lê filtros atuais
-      const u = (await supa.auth.getUser()).data.user;
-      if (!u) return;
-
-      const ini = document.getElementById('f_ini')?.value || '';
-      const fim = document.getElementById('f_fim')?.value || '';
-      const tipo = document.getElementById('f_tipo')?.value || 'todos';
-
-      // monta query string respeitando filtros
-      const q = new URLSearchParams({ userId: u.id });
-      if (ini) q.set('start', new Date(ini + 'T00:00:00').toISOString());
-      if (fim) q.set('end',   new Date(fim + 'T23:59:59.999').toISOString());
-      if (tipo && tipo !== 'todos') q.set('tipo', tipo);
-
-      const resp = await fetch('/api/refeicoes?' + q.toString()).then(r=>r.json());
-      if (!resp.ok) { console.warn(resp.error); return; }
-
-      histCache = resp.data || [];
-      renderHistorico(histCache);
-    }
-
-    // listeners de filtro
-    document.getElementById('btnFiltrar')?.addEventListener('click', fetchHistorico);
+    // Filtros do histórico (usam carregarHistorico)
+    document.getElementById('btnFiltrar')?.addEventListener('click', carregarHistorico);
 
     document.getElementById('btnHoje')?.addEventListener('click', ()=>{
       const d = new Date();
       const iso = d.toISOString().slice(0,10);
-      document.getElementById('f_ini').value = iso;
-      document.getElementById('f_fim').value = iso;
-      fetchHistorico();
+      document.getElementById('f_inicio').value = iso;
+      document.getElementById('f_fim').value    = iso;
+      carregarHistorico();
     });
 
     document.getElementById('btnSemana')?.addEventListener('click', ()=>{
       const fim = new Date();
       const ini = new Date(Date.now() - 6*86400000);
-      document.getElementById('f_ini').value = ini.toISOString().slice(0,10);
-      document.getElementById('f_fim').value = fim.toISOString().slice(0,10);
-      fetchHistorico();
+      document.getElementById('f_inicio').value = ini.toISOString().slice(0,10);
+      document.getElementById('f_fim').value    = fim.toISOString().slice(0,10);
+      carregarHistorico();
     });
 
     document.getElementById('btnMes')?.addEventListener('click', ()=>{
       const fim = new Date();
       const ini = new Date(Date.now() - 29*86400000);
-      document.getElementById('f_ini').value = ini.toISOString().slice(0,10);
-      document.getElementById('f_fim').value = fim.toISOString().slice(0,10);
-      fetchHistorico();
+      document.getElementById('f_inicio').value = ini.toISOString().slice(0,10);
+      document.getElementById('f_fim').value    = fim.toISOString().slice(0,10);
+      carregarHistorico();
     });
 
-    // excluir registro no histórico
-    document.getElementById('histBody')?.addEventListener('click', async (e)=>{
-      const b = e.target.closest('button.btn-del');
-      if (!b) return;
-      const id = b.dataset.id;
-      const u = (await supa.auth.getUser()).data.user;
-      if (!u) return;
-      if (!confirm('Excluir este registro?')) return;
-      await fetch(`/api/refeicoes/${id}?userId=${u.id}`, { method:'DELETE' });
-      fetchHistorico();
-    });
-
-    // exporta SOMENTE o que está visível (filtro aplicado)
+    // Exporta o que está visível na tabela #tHistorico (com filtros aplicados)
     document.getElementById('btnBaixarXlsx')?.addEventListener('click', ()=>{
-      const rows = [...document.querySelectorAll('#histBody tr')].map(tr=>{
+      const rows = [...document.querySelectorAll('#tHistorico tbody tr')].map(tr=>{
         const t = tr.querySelectorAll('td');
         return {
-          Data: t[0]?.innerText || '',
-          Refeicao: t[1]?.innerText || '',
-          Glicemia: t[2]?.innerText || '',
-          CHO_g: t[3]?.innerText || '',
-          PG_eq_g: t[4]?.innerText || '',
-          Dose_rapida: t[5]?.innerText || '',
-          Dose_regular: t[6]?.innerText || ''
+          Data:            t[0]?.innerText || '',
+          Tipo:            t[1]?.innerText || '',
+          Glicemia:        t[2]?.innerText || '',
+          Descricao:       t[3]?.innerText || '',
+          CHO_g:           t[4]?.innerText || '',
+          PG_eq_g:         t[5]?.innerText || '',
+          Dose_rapida:     t[6]?.innerText || '',
+          Dose_regular:    t[7]?.innerText || ''
         };
       });
       if (!rows.length){ alert('Nada para exportar com os filtros atuais.'); return; }
@@ -890,6 +831,7 @@
       XLSX.utils.book_append_sheet(wb, ws, 'Historico');
       XLSX.writeFile(wb, `glicocerto_historico_${new Date().toISOString().slice(0,10)}.xlsx`);
     });
+
 
     document.addEventListener('click', async (ev) => {
       const t=ev.target;
