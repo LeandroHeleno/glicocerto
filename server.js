@@ -61,6 +61,44 @@ function withTimeout(promise, ms = 45000, label = "Timeout") {
     new Promise((_, rej) => setTimeout(() => rej(new Error(label)), ms)),
   ]);
 }
+// ---- System prompt para análise de refeição ----
+function systemPrompt(cfg = {}) {
+  const icr = Number(cfg.icr || cfg.insulina_cho || 10);    // g CHO por 1U
+  const isf = Number(cfg.isf || cfg.glicose_insulina || 50); // mg/dL reduzidos por 1U
+  const target = Number(cfg.target || 100);
+  const strat = cfg.pg_strategy || "regular_now"; // "regular_now" | "rapid_later"
+
+  return [
+    "Você é um assistente de contagem de carboidratos e cálculo de insulina para Diabetes Tipo 1.",
+    "Saída OBRIGATÓRIA:",
+    "1) Um bloco HTML curto e responsivo com as informações organizadas (itens/estimativas).",
+    "2) Um bloco <pre> contendo estritamente um JSON com as chaves:",
+    "   - carbo_g: número (gramas de carboidrato estimados)",
+    "   - pg_cho_equiv_g: número (equivalente em gramas de CHO referente a proteína+gordura)",
+    "   - resumo: string curta (apenas alimentos e quantidades, ex: '1 coxinha, 200 g batata frita, 1 coca zero')",
+    "",
+    "Regras:",
+    `- Use ICR=${icr}, ISF=${isf}, alvo=${target}.`,
+    `- Estratégia P+G: ${strat} (se 'rapid_later', informar no HTML que a dose de P+G é tomada depois).`,
+    "- Não use linguagem rebuscada. Seja direto e claro.",
+    "- O HTML deve caber bem em celular.",
+    "",
+    "Formato final (exemplo de estrutura, não repetir este texto literal):",
+    "----------------------------------------",
+    "<div>",
+    "  <h4>Detalhes</h4>",
+    "  <ul>",
+    "    <li>Carbo estimado: X g</li>",
+    "    <li>Equivalente P+G: Y g CHO</li>",
+    "    <li>Observações curtas…</li>",
+    "  </ul>",
+    "</div>",
+    "<pre>{\"carbo_g\": 55, \"pg_cho_equiv_g\": 12, \"resumo\": \"...\"}</pre>",
+    "----------------------------------------",
+    "",
+    "Importante: O JSON no <pre> deve ser válido e conter SOMENTE as três chaves pedidas."
+  ].join("\n");
+}
 
 // Extrai JSON do <pre>…</pre> (carbo_g, pg_cho_equiv_g, resumo)
 function pickFromPre(html) {
@@ -206,7 +244,7 @@ app.post("/api/chat", async (req, res) => {
     }
 
     const { data: cfgRaw } = await supabase.from("patient_settings").select("*").eq("user_id", userId).single();
-    const cfg = { ...cfgRaw, pg_strategy: pg_strategy || cfgRaw?.pg_strategy || "regular_now" };
+    const cfg = { ...(cfgRaw || {}), pg_strategy: pg_strategy || cfgRaw?.pg_strategy || "regular_now" };
 
     let detalhes_html = "";
     let carbo_g = 0, pg_cho_equiv_g = 0, refeicao_resumo = String(message || "").trim();
@@ -259,7 +297,7 @@ app.post("/api/chat", async (req, res) => {
     // grava; se falhar por tamanho do campo "descricao_model", tenta sem ele
     let { error: e1 } = await supabase.from("refeicoes").insert(insertPayload);
     if (e1) {
-      const basic = { ...insertPayload };
+      const basic = { ...(insertPayload || {}) };
       delete basic.descricao_model;
       const retry = await supabase.from("refeicoes").insert(basic);
       if (retry.error) throw e1;
@@ -367,7 +405,7 @@ app.post("/api/chat-image", async (req, res) => {
 
     let { error: e1 } = await supabase.from("refeicoes").insert(insertPayload);
     if (e1) {
-      const basic = { ...insertPayload };
+      const basic = { ...(insertPayload || {}) };
       delete basic.descricao_model;
       const retry = await supabase.from("refeicoes").insert(basic);
       if (retry.error) throw e1;
