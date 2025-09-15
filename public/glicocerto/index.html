@@ -226,7 +226,7 @@
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.8.17</div>
+            <div>v1.8.18</div>
           </div>
         </div>
       </div>
@@ -546,7 +546,7 @@
   </nav>
 
   <script>
-    console.log('GlicoCerto v1.8.17 carregado', new Date().toISOString());
+    console.log('GlicoCerto v1.8.18 carregado', new Date().toISOString());
     /* ===== Tema (ícone único) ===== */
     const THEME_KEY='gc_theme_pref';
     const root=document.documentElement;
@@ -762,6 +762,8 @@
         const payload = { userId: USER_ID, glicemia, pg_strategy: strat, tipo };
         if (mensagem) payload.message = mensagem;
 
+        console.log('[Enviar] foto?', !!FOTO_SELECIONADA, 'glicemia:', glicemia, 'tipo:', tipo);
+
         let url = '/api/chat';
 
         // FOTO: mede compressão
@@ -857,11 +859,20 @@
         detalhesBox.style.display = 'block';
         detalhesBox.open = false;
 
-      } catch (e) {
-        console.error(e);
-        resumo.textContent = (e.name === 'AbortError')
-          ? 'Tempo esgotado processando a imagem. Tente outra foto (iluminação melhor).'
-          : 'Erro ao conectar com o servidor.';
+      } catch (err) {
+        console.error('[Enviar] falhou', err);
+        if (err?.name === 'AbortError') {
+          resumo.textContent = 'Tempo esgotado calculando a refeição. Tente novamente ou envie uma foto menor.';
+        } else {
+          resumo.textContent = 'Erro de rede. Verifique sua conexão e tente novamente.';
+        }
+        let bmp;
+        try {
+          bmp = await createImageBitmap(src);
+        } catch {
+          console.warn('[Compress] createImageBitmap falhou — usando fallback FileReader/Image');
+          return new Promise((resolve,reject)=>{ /* ... como já está ... */ });
+        }
       }
     };
 
