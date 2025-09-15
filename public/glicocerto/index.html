@@ -146,9 +146,8 @@
     .ok{color:#1e7e34} .err{color:#b91c1c}
 
     .table-wrap { overflow:auto; -webkit-overflow-scrolling:touch; border:1px solid var(--border); border-radius:12px; }
-    table { width:100%; border-collapse: collapse; min-width: 900px; background: var(--card); color: var(--text); }
-    table { width:100%; border-collapse: collapse; background: var(--card); color: var(--text); } 
-    #tHistorico { min-width: 900px; } 
+    table { width:100%; border-collapse: collapse; background: var(--card); color: var(--text); }
+    #tHistorico { min-width: 900px; }
 
     th, td { border-bottom:1px solid var(--border); padding:10px 8px; text-align:left; font-size:14px; vertical-align:top; }
     th { background: var(--thead); position: sticky; top:0; z-index:1; }
@@ -227,7 +226,7 @@
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.8.11</div>
+            <div>v1.8.13</div>
           </div>
         </div>
       </div>
@@ -765,9 +764,11 @@
         let url = '/api/chat';
         if (FOTO_SELECIONADA) {
           // Reduz para ~300px e JPEG ~85%
-          const dataUrl = await downscaleToDataURL(FOTO_SELECIONADA, 300, 0.85);
+          // no btnEnviar.onclick
+          const dataUrl = await downscaleToDataURL(FOTO_SELECIONADA, 224, 0.75);
           payload.image_data_url = dataUrl;
           url = '/api/chat-image';
+
         }
 
         const ctrl  = new AbortController();
@@ -1062,26 +1063,23 @@
       cv.getContext('2d').drawImage(img,0,0,w,h);
       return cv;
     }
-    function downscaleToDataURL(file, maxSide=300, quality=0.85){
+    function downscaleToDataURL(file, maxSide=224, quality=0.75){
       return new Promise((resolve,reject)=>{
         const fr = new FileReader();
         fr.onload = ()=>{
-          const dataUrl = fr.result; // pode ser HEIC/HEIF/AVIF/etc
-          const tryImage = new Image();
-          tryImage.onload = ()=>{
-            try {
-              const jpeg = imgToCanvas(tryImage, maxSide).toDataURL('image/jpeg', quality);
+          const dataUrl = fr.result;
+          const img = new Image();
+          img.onload = ()=>{
+            try{
+              const cv = imgToCanvas(img, maxSide);
+              const jpeg = cv.toDataURL('image/jpeg', quality);
               resolve(jpeg);
-            } catch (e) {
-              // Se por algum motivo não conseguir gerar JPEG, manda o original
-              resolve(String(dataUrl));
+            }catch{
+              resolve(String(dataUrl)); // fallback: manda original (HEIC/AVIF etc.)
             }
           };
-          tryImage.onerror = ()=>{
-            // Browser não decodifica (ex.: HEIC). Envia o DataURL original mesmo assim.
-            resolve(String(dataUrl));
-          };
-          tryImage.src = dataUrl;
+          img.onerror = ()=> resolve(String(dataUrl)); // fallback: envia original
+          img.src = dataUrl;
         };
         fr.onerror = reject;
         fr.readAsDataURL(file);

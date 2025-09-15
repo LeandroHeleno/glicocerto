@@ -163,15 +163,29 @@ function systemPrompt(cfg) {
 
 
 // Extrai JSON do <pre>…</pre> (carbo_g, pg_cho_equiv_g, resumo)
+// Substitua a função inteira por esta
 function pickFromPre(html) {
   let carbo_g = 0, pg_cho_equiv_g = 0, resumo = "";
+  const parseNum = (v) => {
+    if (v == null) return 0;
+    const s = String(v).replace(/\./g, '').replace(',', '.'); // 12,5 -> 12.5 ; 1.234,5 -> 1234.5
+    const n = parseFloat(s);
+    return Number.isFinite(n) ? n : 0;
+  };
   try {
     const m = String(html || "").match(/<pre[^>]*>\s*({[\s\S]*?})\s*<\/pre>/i);
     if (m && m[1]) {
       const j = JSON.parse(m[1]);
-      carbo_g = Number(j.carbo_g || 0);
-      pg_cho_equiv_g = Number(j.pg_cho_equiv_g || 0);
-      resumo = String(j.resumo || "");
+
+      // chaves aceitáveis para carboidrato
+      const carboKeys = ["carbo_g", "carbo_liquido_g", "carbo_liquidos_g", "cho_g"];
+      for (const k of carboKeys) if (k in j) { carbo_g = parseNum(j[k]); break; }
+
+      // chaves aceitáveis para proteína+gordura em CHO equivalente
+      const pgKeys = ["pg_cho_equiv_g", "pg_cho_equiv", "pg_eq_g", "pg_eq", "pg_cho_g"];
+      for (const k of pgKeys) if (k in j) { pg_cho_equiv_g = parseNum(j[k]); break; }
+
+      if ("resumo" in j) resumo = String(j.resumo || "");
     }
   } catch {}
   return { carbo_g, pg_cho_equiv_g, resumo };
@@ -419,8 +433,7 @@ app.post("/api/chat-image", async (req, res) => {
             },
           ],
         }),
-        60000,
-        "Timeout IA (chat-imagem)"
+        45000,"Timeout IA (chat-imagem)"
       );
 
       const raw = completion.choices?.[0]?.message?.content || "";
