@@ -226,7 +226,7 @@
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.8.23</div>
+            <div>v1.8.24</div>
           </div>
         </div>
       </div>
@@ -546,7 +546,7 @@
   </nav>
 
   <script>
-    console.log('GlicoCerto v1.8.23 carregado', new Date().toISOString());
+    console.log('GlicoCerto v1.8.24 carregado', new Date().toISOString());
     /* ===== Tema (ícone único) ===== */
     const THEME_KEY='gc_theme_pref';
     const root=document.documentElement;
@@ -649,7 +649,18 @@
       if (fotoNome) fotoNome.textContent = '';
     }
 
-    async function getAuthHeaders(){ const {data:{session}}=await SUPABASE.auth.getSession(); const t=session?.access_token; return t?{Authorization:`Bearer ${t}`}:{ }; }
+    async function getAuthHeaders() {
+      try {
+        if (!SUPABASE) { console.warn('SUPABASE nulo em getAuthHeaders'); return {}; }
+        const { data: { session }, error } = await SUPABASE.auth.getSession();
+        if (error) { console.warn('getSession error', error); return {}; }
+        const t = session?.access_token;
+        return t ? { Authorization: `Bearer ${t}` } : {};
+      } catch (e) {
+        console.error('getAuthHeaders exception', e);
+        return {};
+      }
+    }
 
     /* ===== Tabs ===== */
     function showTab(target){
@@ -760,8 +771,21 @@
 
       try {
         console.log('entrou no try', new Date().toISOString());
-        const h = await getAuthHeaders();
-        const payload = { userId: USER_ID, glicemia, pg_strategy: strat, tipo };        
+        console.time('authHeaders');
+        let h = {};
+        try {
+          h = await Promise.race([
+            getAuthHeaders(),
+            new Promise((_, rej) => setTimeout(() => rej(new Error('getAuthHeaders timeout')), 3000))
+          ]);
+          console.timeEnd('authHeaders');
+        } catch (e) {
+          console.warn('getAuthHeaders falhou/timeout, seguindo sem token', e);
+          console.timeEnd('authHeaders');
+          h = {}; // segue sem Authorization
+        }
+
+        const payload = { userId: USER_ID, glicemia, pg_strategy: strat, tipo };
         if (mensagem) payload.message = mensagem;
 
         console.log('[Enviar] foto?', !!FOTO_SELECIONADA, 'glicemia:', glicemia, 'tipo:', tipo);
@@ -784,7 +808,7 @@
         console.time('request');
         const r = await fetch(url, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) }, // <-- corrigido
+          headers: { 'Content-Type': 'application/json', ...h }, 
           body: JSON.stringify(payload),
           signal: ctrl.signal
         });
