@@ -226,7 +226,7 @@
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.8.20</div>
+            <div>v1.8.23</div>
           </div>
         </div>
       </div>
@@ -546,7 +546,7 @@
   </nav>
 
   <script>
-    console.log('GlicoCerto v1.8.20 carregado', new Date().toISOString());
+    console.log('GlicoCerto v1.8.23 carregado', new Date().toISOString());
     /* ===== Tema (ícone único) ===== */
     const THEME_KEY='gc_theme_pref';
     const root=document.documentElement;
@@ -726,6 +726,7 @@
         validarCampos();
         return;
       }
+      console.log('const h enviandorecebendo a foto', new Date().toISOString());
       FOTO_SELECIONADA = file;
       if (fotoNome) fotoNome.textContent = file.name || '1 foto selecionada';
 
@@ -758,10 +759,9 @@
       detalhesHTML.innerHTML = '';
 
       try {
+        console.log('entrou no try', new Date().toISOString());
         const h = await getAuthHeaders();
-
-        const payload = { userId: USER_ID, glicemia, pg_strategy: strat, tipo };
-        console.log('const h enviando', new Date().toISOString());
+        const payload = { userId: USER_ID, glicemia, pg_strategy: strat, tipo };        
         if (mensagem) payload.message = mensagem;
 
         console.log('[Enviar] foto?', !!FOTO_SELECIONADA, 'glicemia:', glicemia, 'tipo:', tipo);
@@ -769,6 +769,7 @@
         let url = '/api/chat';
 
         // FOTO: mede compressão e envia como WEBP leve
+        console.log('verificando if (foto_selecionada)', new Date().toISOString());
         if (FOTO_SELECIONADA) {
           console.time('compress');
           const dataUrl = await downscaleToDataURL(FOTO_SELECIONADA, 192, 0.7, 'image/webp');
@@ -867,10 +868,9 @@
           resumo.textContent = 'Erro de rede. Verifique sua conexão e tente novamente.';
         }
       }
+      console.log('saiu do envio', new Date().toISOString());
     };
 
-
-    console.log('saiu do envio', new Date().toISOString());
     /* ===== Nightscout no topo (badge) + auto-preencher chat ===== */
     const NS_REFRESH_MS=240000; let nsHeaderTimer=null;
     function hideNsBadge(){ nsBadge.style.display='none'; nsBadgeVal.textContent='--'; document.getElementById('glicemiaSource').textContent='(digite manualmente)'; const gi=document.getElementById('glicemia'); gi.readOnly=false; }
