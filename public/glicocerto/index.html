@@ -226,7 +226,7 @@
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.8.14</div>
+            <div>v1.8.15</div>
           </div>
         </div>
       </div>
@@ -766,6 +766,7 @@
           // Reduz para ~300px e JPEG ~85%
           console.time('compress');
           const dataUrl = await downscaleToDataURL(FOTO_SELECIONADA, 192, 0.7, 'image/webp');
+          console.timeEnd('compress'); 
           payload.image_data_url = dataUrl;
           url = '/api/chat-image';
         }
