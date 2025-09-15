@@ -394,6 +394,10 @@ app.post("/api/chat", async (req, res) => {
     });
   } catch (e) {
     console.error("[POST /api/chat]", e);
+    const msg = String(e?.message || "");
+    if (msg.startsWith("Timeout")) {
+      return res.status(504).json({ ok: false, error: "Timeout ao analisar a imagem." });
+    }
     res.status(500).json({ ok: false, error: e.message });
   }
 });
@@ -452,7 +456,12 @@ app.post("/api/chat-image", async (req, res) => {
     try {
       foto_url = await uploadMealPhoto(supabase, userId, image_data_url);
     } catch (eUp) {
-      console.warn("[uploadMealPhoto]", eUp?.message || eUp);
+      console.error("[POST /api/chat-image]", e);
+      const msg = String(e?.message || "");
+      if (msg.startsWith("Timeout")) {
+        return res.status(504).json({ ok: false, error: "Timeout ao analisar a imagem." });
+      }
+      res.status(500).json({ ok: false, error: e.message });
     }
 
     const icr = Number(cfg?.icr || cfg?.insulina_cho || 10);
