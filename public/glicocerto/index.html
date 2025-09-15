@@ -153,11 +153,14 @@
     th { background: var(--thead); position: sticky; top:0; z-index:1; }
     .btn-del { background:#e11d48; color:#fff; border:none; padding:8px 10px; border-radius:10px; cursor:pointer; min-height:40px; }
 
-    .details-clean .table-wrap {max-width: 100%;overflow-x: auto;-webkit-overflow-scrolling: touch;}  
     .details-clean { border:1px solid var(--border); border-radius:10px; padding:10px; background:var(--card); }
-    .details-clean .gc-table { width:100%; border-collapse:collapse; font-size:14px; }
-    .details-clean .gc-table th, .details-clean .gc-table td{ border:1px solid var(--border); padding:6px 8px; text-align:left; }
-    .details-clean .gc-table th{ background:var(--thead); }
+    .details-clean .table-wrap { max-width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    .details-clean .gc-table { width:100%; border-collapse:collapse; font-size:14px; table-layout:auto; }
+    .details-clean .gc-table th, .details-clean .gc-table td{
+      border:1px solid var(--border); padding:6px 8px; text-align:left;
+      white-space:normal; word-break:break-word; overflow-wrap:anywhere;
+    }
+
 
     .bottom-nav{ position:fixed; left:0; right:0; bottom:0; height:64px; background:var(--card); border-top:1px solid var(--border); display:none; align-items:center; justify-content:space-around; z-index:200; }
     .bottom-nav button{ background:none; border:none; font:inherit; color:var(--text); display:flex; flex-direction:column; align-items:center; gap:4px; padding:8px 12px; border-radius:12px; }
@@ -226,7 +229,7 @@
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.8.24</div>
+            <div>v1.8.26</div>
           </div>
         </div>
       </div>
@@ -546,7 +549,7 @@
   </nav>
 
   <script>
-    console.log('GlicoCerto v1.8.24 carregado', new Date().toISOString());
+    console.log('GlicoCerto v1.8.26 carregado', new Date().toISOString());
     /* ===== Tema (ícone único) ===== */
     const THEME_KEY='gc_theme_pref';
     const root=document.documentElement;
@@ -810,7 +813,11 @@
         }
 
         const payload = { userId: USER_ID, glicemia, pg_strategy: strat, tipo };
-        if (mensagem) payload.message = mensagem;
+        if (!mensagem) {
+          payload.message = 'Se houver embalagem, use a PORÇÃO indicada no rótulo (ex.: 1 pacote = 24 g) em vez de 100 g padrão.';
+        } else {
+          payload.message = mensagem;
+        }
 
         console.log('[Enviar] foto?', !!FOTO_SELECIONADA, 'glicemia:', glicemia, 'tipo:', tipo);
 
