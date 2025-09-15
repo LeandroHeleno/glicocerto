@@ -870,7 +870,7 @@
     };
 
 
-
+    console.log('saiu do envio', new Date().toISOString());
     /* ===== Nightscout no topo (badge) + auto-preencher chat ===== */
     const NS_REFRESH_MS=240000; let nsHeaderTimer=null;
     function hideNsBadge(){ nsBadge.style.display='none'; nsBadgeVal.textContent='--'; document.getElementById('glicemiaSource').textContent='(digite manualmente)'; const gi=document.getElementById('glicemia'); gi.readOnly=false; }
