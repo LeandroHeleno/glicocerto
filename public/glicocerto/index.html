@@ -743,7 +743,7 @@
     /* ===== Chat ===== */
     document.getElementById('btnEnviar').onclick = async () => {
       if (!USER_ID) { alert('Faça login para enviar.'); return; }
-
+      console.log('Botão enviar acionado', new Date().toISOString());
       const resumo       = document.getElementById('resumo');
       const detalhesBox  = document.getElementById('detalhesBox');
       const detalhesHTML = document.getElementById('detalhesHTML');
@@ -761,6 +761,7 @@
         const h = await getAuthHeaders();
 
         const payload = { userId: USER_ID, glicemia, pg_strategy: strat, tipo };
+        console.log('const h enviando', new Date().toISOString());
         if (mensagem) payload.message = mensagem;
 
         console.log('[Enviar] foto?', !!FOTO_SELECIONADA, 'glicemia:', glicemia, 'tipo:', tipo);
