@@ -649,18 +649,42 @@
       if (fotoNome) fotoNome.textContent = '';
     }
 
+    let _authCache = { header: null, exp: 0 };
+
     async function getAuthHeaders() {
+      // cache por 60s para evitar bater no SDK toda hora
+      const now = Date.now();
+      if (_authCache.header && _authCache.exp > now) return _authCache.header;
+
+      // garante que o client existe
       try {
-        if (!SUPABASE) { console.warn('SUPABASE nulo em getAuthHeaders'); return {}; }
-        const { data: { session }, error } = await SUPABASE.auth.getSession();
-        if (error) { console.warn('getSession error', error); return {}; }
-        const t = session?.access_token;
-        return t ? { Authorization: `Bearer ${t}` } : {};
+        if (!SUPABASE) {
+          // tenta inicializar rápido (se você já tem ensureSupabaseReady no arquivo)
+          await Promise.race([
+            ensureSupabaseReady?.(),
+            new Promise((_, rej) => setTimeout(() => rej(new Error('ensureSupabaseReady timeout')), 1500))
+          ]);
+        }
       } catch (e) {
-        console.error('getAuthHeaders exception', e);
+        console.warn('ensureSupabaseReady falhou/timeout:', e);
+      }
+
+      // busca a sessão com timeout curto (2.5s)
+      try {
+        const { session } = await Promise.race([
+          (async () => (await SUPABASE.auth.getSession()).data)(),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('getSession timeout')), 2500))
+        ]);
+        const t = session?.access_token;
+        const hdr = t ? { Authorization: `Bearer ${t}` } : {};
+        _authCache = { header: hdr, exp: now + 60_000 };
+        return hdr;
+      } catch (e) {
+        console.warn('getAuthHeaders falhou/timeout, seguindo sem token', e);
         return {};
       }
     }
+
 
     /* ===== Tabs ===== */
     function showTab(target){
