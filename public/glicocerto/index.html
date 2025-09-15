@@ -223,12 +223,10 @@
           <button data-menu="ajuda">❓ Ajuda</button>
           <button data-menu="termos">📜 Termos</button>
           <button data-menu="sair">⎋ Sair</button>
-          <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-          <script>eruda.init();</script>  
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.8.16</div>
+            <div>v1.8.17</div>
           </div>
         </div>
       </div>
@@ -548,6 +546,7 @@
   </nav>
 
   <script>
+    console.log('GlicoCerto v1.8.17 carregado', new Date().toISOString());
     /* ===== Tema (ícone único) ===== */
     const THEME_KEY='gc_theme_pref';
     const root=document.documentElement;
@@ -764,45 +763,43 @@
         if (mensagem) payload.message = mensagem;
 
         let url = '/api/chat';
+
+        // FOTO: mede compressão
         if (FOTO_SELECIONADA) {
-          // Reduz para ~300px e JPEG ~85%
           console.time('compress');
           const dataUrl = await downscaleToDataURL(FOTO_SELECIONADA, 192, 0.7, 'image/webp');
-          console.timeEnd('compress'); 
+          console.timeEnd('compress');           // << ESSENCIAL: sem isso, não aparece log
           payload.image_data_url = dataUrl;
           url = '/api/chat-image';
         }
-        
+
+        // REQUISIÇÃO: mede rede+servidor+IA
         const ctrl  = new AbortController();
         const timer = setTimeout(() => ctrl.abort(), 45_000);
-
         console.time('request');
         const r = await fetch(url, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...h },
+          headers: { 'Content-Type': 'application/json', ...authHeader() }, // use seu header atual
           body: JSON.stringify(payload),
           signal: ctrl.signal
         });
+        console.timeEnd('request');
         clearTimeout(timer);
 
-        // trata HTTP de timeout
+        // Trata HTTP de timeout (504/408)
         if (r.status === 504 || r.status === 408) {
-          resumo.textContent = 'Tempo esgotado calculando a refeição. Tente novamente ou envie uma foto menor.';
+          resumo.textContent = 'Tempo esgotado calculando a refeição. Tente novamente.';
+          return;
+        }
+        const d = await r.json();
+        if (!d.ok) {
+          const msg = String(d.error || '').toLowerCase();
+          resumo.textContent = msg.includes('timeout')
+            ? 'Tempo esgotado calculando a refeição. Tente novamente.'
+            : 'Erro: ' + (d.error || 'Falha no cálculo.');
           return;
         }
 
-        const d = await r.json();
-        console.timeEnd('request');
-        if (!d.ok) {
-          // se o back mandar uma mensagem contendo "Timeout"
-          const msg = String(d.error || '').toLowerCase();
-          if (msg.includes('timeout')) {
-            resumo.textContent = 'Tempo esgotado calculando a refeição. Tente novamente.';
-          } else {
-            resumo.textContent = 'Erro: ' + (d.error || 'Falha no cálculo.');
-          }
-          return;
-        }
 
         // ==== resumo ====
         const t          = d.totais || {};
@@ -1083,51 +1080,34 @@
       return cv;
     }
     async function downscaleToDataURL(file, maxSide = 192, quality = 0.7, mime = 'image/webp'){
-      // 1) lê arquivo em blob e cria bitmap (decode mais rápido)
       const src = file instanceof Blob ? file : new Blob([file], {type: file.type || 'image/*'});
-      let bmp;
-      try { bmp = await createImageBitmap(src); }
-      catch { // fallback se o navegador não suportar
-        return new Promise((resolve,reject)=>{
+      try {
+        const bmp = await createImageBitmap(src);
+        const r = bmp.width / bmp.height;
+        let w = bmp.width, h = bmp.height;
+        if (w > h && w > maxSide) { w = maxSide; h = Math.round(w / r); }
+        else if (h >= w && h > maxSide) { h = maxSide; w = Math.round(h * r); }
+        const cv = document.createElement('canvas');
+        cv.width = w; cv.height = h;
+        const ctx = cv.getContext('2d', {alpha:false});
+        ctx.drawImage(bmp, 0, 0, w, h);
+        const blob = await new Promise(res => cv.toBlob(b => res(b||src), mime, quality));
+        return await new Promise((resolve, reject) => {
           const fr = new FileReader();
-          fr.onload = ()=>{
-            const img = new Image();
-            img.onload = ()=>{
-              const cv = imgToCanvas(img, maxSide);
-              try { resolve(cv.toDataURL(mime, quality)); } catch { resolve(fr.result); }
-            };
-            img.onerror = ()=> resolve(fr.result);
-            img.src = fr.result;
-          };
+          fr.onload = () => resolve(fr.result);
+          fr.onerror = reject;
+          fr.readAsDataURL(blob);
+        });
+      } catch {
+        // fallback se o device não decodificar (HEIC/AVIF etc.)
+        return await new Promise((resolve, reject) => {
+          const fr = new FileReader();
+          fr.onload = () => resolve(fr.result);
           fr.onerror = reject;
           fr.readAsDataURL(file);
         });
       }
-
-      // 2) redimensiona
-      const r = bmp.width / bmp.height;
-      let w = bmp.width, h = bmp.height;
-      if (w > h && w > maxSide) { w = maxSide; h = Math.round(w / r); }
-      else if (h >= w && h > maxSide) { h = maxSide; w = Math.round(h * r); }
-
-      const cv = document.createElement('canvas');
-      cv.width = w; cv.height = h;
-      const ctx = cv.getContext('2d', {alpha: false});
-      ctx.drawImage(bmp, 0, 0, w, h);
-
-      // 3) gera BLOB WEBP assíncrono (não trava UI)
-      const blob = await new Promise(res => cv.toBlob(b => res(b || src), mime, quality));
-
-      // 4) converte BLOB -> DataURL (para manter contrato com o servidor)
-      return await new Promise((resolve, reject) => {
-        const fr = new FileReader();
-        fr.onload = () => resolve(fr.result);
-        fr.onerror = reject;
-        fr.readAsDataURL(blob);
-      });
     }
-
-
   </script>
   <script>
     // 1) Registrar o Service Worker
