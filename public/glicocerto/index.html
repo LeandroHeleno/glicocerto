@@ -226,7 +226,7 @@
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.8.19</div>
+            <div>v1.8.20</div>
           </div>
         </div>
       </div>
@@ -546,7 +546,7 @@
   </nav>
 
   <script>
-    console.log('GlicoCerto v1.8.19 carregado', new Date().toISOString());
+    console.log('GlicoCerto v1.8.20 carregado', new Date().toISOString());
     /* ===== Tema (ícone único) ===== */
     const THEME_KEY='gc_theme_pref';
     const root=document.documentElement;
@@ -782,7 +782,7 @@
         console.time('request');
         const r = await fetch(url, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...h },   // <-- corrigido
+          headers: { 'Content-Type': 'application/json', ...(await getAuthHeaders()) }, // <-- corrigido
           body: JSON.stringify(payload),
           signal: ctrl.signal
         });
