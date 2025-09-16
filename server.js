@@ -50,10 +50,6 @@ function supabaseFromReq(req) {
 }
 function num(s){ const n = parseFloat(String(s).replace(/\./g,'').replace(',','.')); return Number.isFinite(n)?n:0; }
 
-// Soma proteína e gordura lendo THEAD/TBODY (se existirem) e, se faltar, usa heurística
-function computePgFromHtml(html, percent=1.0){
-  const txt = String(html||"");
-  let p=0,g=0;
 
   // 1) Tentar THEAD/TBODY com índices de coluna
   const thead = txt.match(/<thead[\s\S]*?<\/thead>/i)?.[0]||"";
