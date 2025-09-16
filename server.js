@@ -48,6 +48,61 @@ function supabaseFromReq(req) {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
+function num(s){ const n = parseFloat(String(s).replace(/\./g,'').replace(',','.')); return Number.isFinite(n)?n:0; }
+
+// Soma proteína e gordura lendo THEAD/TBODY (se existirem) e, se faltar, usa heurística
+function computePgFromHtml(html, percent=1.0){
+  const txt = String(html||"");
+  let p=0,g=0;
+
+  // 1) Tentar THEAD/TBODY com índices de coluna
+  const thead = txt.match(/<thead[\s\S]*?<\/thead>/i)?.[0]||"";
+  const headers = Array.from(thead.matchAll(/<th[^>]*>([\s\S]*?)<\/th>/gi)).map(m=>m[1].replace(/<[^>]+>/g,'').trim().toLowerCase());
+  let iP = headers.findIndex(h=>/prote/i.test(h));
+  let iG = headers.findIndex(h=>/(gordu|fat)/i.test(h));
+  const tbody = txt.match(/<tbody[\s\S]*?<\/tbody>/i)?.[0]||"";
+  if(tbody && (iP>=0 || iG>=0)){
+    const rows = Array.from(tbody.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)).map(m=>m[1]);
+    for(const row of rows){
+      const cols = Array.from(row.matchAll(/<t[hd][^>]*>([\s\S]*?)<\/t[hd]>/gi)).map(m=>m[1].replace(/<[^>]+>/g,'').trim());
+      if(iP>=0 && cols[iP]) p += num(cols[iP].match(/([\d\.,]+)/)?.[1]||0);
+      if(iG>=0 && cols[iG]) g += num(cols[iG].match(/([\d\.,]+)/)?.[1]||0);
+    }
+  }
+
+  // 2) Heurística de backup (procura “proteína … g” / “gordura … g” nas células)
+  if(!(p>0) || !(g>0)){
+    const rows = txt.match(/<tr[\s\S]*?<\/tr>/gi)||[];
+    let p2=0,g2=0;
+    for(const row of rows){
+      const cells = Array.from(row.matchAll(/<t[hd][^>]*>([\s\S]*?)<\/t[hd]>/gi)).map(m=>m[1].replace(/<[^>]+>/g,''));
+      for(const c of cells){
+        const low = c.toLowerCase();
+        const val = num(low.match(/([\d\.,]+)\s*g/)?.[1]||0);
+        if(/prote/i.test(low)) p2+=val;
+        if(/gordu|fat/i.test(low)) g2+=val;
+      }
+    }
+    if(p2>0) p = p || p2;
+    if(g2>0) g = g || g2;
+  }
+
+  const kcalP = p*4, kcalG = g*9, kcal = kcalP + kcalG;
+  const choEq = (kcal * (percent||1)) / 10;
+  return { p, g, kcalP, kcalG, kcal, choEq };
+}
+
+// Reescreve/insere a linha dos Totais com as CONTAS numéricas
+function patchPgTotals(html, p, g, kcalP, kcalG, kcal, choEq){
+  const lp = `Proteínas: ${Math.round(p)}g ×4 = ${Math.round(kcalP)} kcal`;
+  const lg = `Gorduras: ${Math.round(g)}g ×9 = ${Math.round(kcalG)} kcal`;
+  const sum = `Proteína + Gordura: ${Math.round(kcal)} kcal → ${choEq.toFixed(1)} g CHO`;
+  const li = `<li><b>Proteínas/gorduras:</b> ${lp}; ${lg}; <b>${sum}</b></li>`;
+  if (/<li><b>Proteínas\/gorduras:[\s\S]*?<\/li>/i.test(html)){
+    return html.replace(/<li><b>Proteínas\/gorduras:[\s\S]*?<\/li>/i, li);
+  }
+  return html.replace(/(<li><b>Carboidratos:[\s\S]*?<\/li>)/i, `$1\n${li}`);
+}
 
 // Utils
 const r0 = (n) => Math.round(Number(n || 0));
@@ -136,7 +191,6 @@ function systemPrompt(cfg) {
 
     <h3>✅ Resumo da dose</h3>
     <ul>
-      <li><b>${rapid}:</b> YU</li>
       <li><b>${rapid} + Correção:</b> YU + WU = <b>TU</b></li>
       ${strat === "regular_now" ? "<li><b>Insulina R:</b> QU</li>" : "<li><b>Insulina ${rapid} em 2 - 3 horas:</b> QU</li>"}
       <li><b>Total bolus:</b> TU</li>
@@ -402,8 +456,8 @@ app.post("/api/chat", async (req, res) => {
       // === Fallback P+G (a partir do HTML/tabela) ===
       const percent = Math.max(0, Math.min(100, Number(cfg?.pg_percent ?? 100))) / 100;
       if (!(pg_cho_equiv_g > 0)) {
-        const { choEq } = computePgFromHtml(detalhes_html, percent);
-        pg_cho_equiv_g = choEq;
+        pg_cho_equiv_g = r.choEq;
+        detalhes_html = patchPgTotals(detalhes_html, r.p, r.g, r.kcalP, r.kcalG, r.kcal, pg_cho_equiv_g);
       }
       // ==============================================
     } else {
