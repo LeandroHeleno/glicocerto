@@ -287,7 +287,7 @@
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.8.40</div>
+            <div>v1.8.41</div>
           </div>
         </div>
       </div>
@@ -333,7 +333,7 @@
           <div><label>ISF – mg/dL por 1U <span class="muted">(glicose_insulina)</span></label><input id="isf" type="number" inputmode="numeric" min="1" step="1" placeholder="Ex.: 50"/></div>
           <div><label>Glicemia alvo (mg/dL) <span class="muted">(target)</span></label><input id="target" type="number" inputmode="numeric" min="60" step="1" placeholder="Ex.: 100"/></div>
 
-          <div><label>% calorias de proteína+gordura a considerar (0–100)</label><input id="pct_cal_pf" type="number" inputmode="numeric" min="0" max="100" step="1" value="100"/></div>
+          <div><label>% calorias de proteína a considerar (0–100) SBD recomenda (35% a 60%)</label><input id="pct_cal_pf" type="number" inputmode="numeric" min="0" max="100" step="1" value="100"/></div>
           <div><label>Estratégia para Proteína+Gordura</label>
             <select id="pg_strategy">
               <option value="regular_now">Usar Insulina Regular (R) agora</option>
@@ -607,7 +607,7 @@
   </nav>
 
   <script>
-    console.log('GlicoCerto v1.8.40 carregado', new Date().toISOString());
+    console.log('GlicoCerto v1.8.41 carregado', new Date().toISOString());
 
     // Ajuda: detecta se há sessão cacheada do Supabase no navegador
     function hasCachedSupabaseSession() {
@@ -1003,8 +1003,7 @@
 
         let linhas = [];
         linhas.push(`Para a refeição “${refeicaoTxt}” (glicemia: ${glicVal} mg/dL):`);
-        linhas.push(`• ${insRapida.toUpperCase()} (carbo + correção): ${choU_i}U + ${corU_i}U = ${totalFiasp_i}U`);
-        linhas.push(`• ${choU_i}U + ${corU_i}U de ${insRapida.toUpperCase()} para carboidratos e correção`);
+        linhas.push(`• ${insRapida.toUpperCase()} (cho + correção): ${choU_i}U + ${corU_i}U = ${totalFiasp_i}U`);        
         if (stratUsed === 'regular_now') {
           linhas.push(`• ${pgU_i}U de Insulina Regular (R) para proteína e gordura.`);
           linhas.push(`• Total: ${totalFiasp_i}U ${insRapida.toUpperCase()} ; ${pgU_i}U Regular`);

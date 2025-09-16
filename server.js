@@ -133,18 +133,33 @@ function systemPrompt(cfg) {
       </table>
     </div>
     <h3>📊 Totais</h3>
-    <ul>
-      <!-- Escreva a soma mostrando a conta -->
-      <li><b>Carboidratos:</b>  a + b + c... = <b>XX g CHO</b></li>
-      <li><b>Proteínas</b>  Liste a soma de todos os valores de proteinas dos alimentos ≈ <b>YY kcal</b></li>
-      <li><b>Gorduras</b>   Liste a soma de todos os valores de gorduras dos alimentos ≈ <b>YY kcal</b></li>
-      <li><b>Proteínas+Gorduras</b>  (p x 4) + (g x 9) ≈ <b>YY kcal</b> ÷ 10 = XX CHO ⇒ x CHO </li>
+   <ul>
+      <!-- Carboidratos diretos -->
+      <li><b>CHO:</b> soma dos carboidratos dos alimentos = <b>${carb_total_g} g CHO</b></li>
+
+      <!-- Proteína -->
+      <li><b>Proteínas:</b> soma = <b>${protein_total_g} g</b></li>
+
+      <!-- Gordura -->
+      <li><b>Gorduras:</b> soma = <b>${fat_total_g} g</b></li>
+
+      <!-- Proteína + Gordura convertidos em CHO (modelo SBD) -->
+      <li>
+        <b>Proteínas + Gorduras:</b><br>
+        Proteína: ${protein_total_g} × 4 = ${prot_kcal} kcal<br>
+        Gordura: ${fat_total_g} × 9 = ${fat_kcal} kcal<br>
+        Aplicando fatores SBD:<br>
+        • Proteína: ${prot_kcal} × (${protPct}/100) = ${prot_adj_kcal} kcal<br>
+        • Gordura: ${fat_kcal} × 0.10 = ${fat_adj_kcal} kcal<br>
+        Soma ajustada: ${prot_adj_kcal} + ${fat_adj_kcal} = <b>${pg_kcal_adj} kcal</b><br>
+        Equivalente CHO: ${pg_kcal_adj} ÷ 10 = <b>${pg_cho_equiv_g} g CHO</b>
+      </li>
     </ul>
 
     <h3>💉 Insulina</h3>
     <ul>
-      <li><b>${rapid} (carboidrato):</b> CHO_totais ÷ ${icr} = X,U ⇒ <b>YU</b></li>
-      <li><b>Correção (glicemia G):</b> (G – ${target}) ÷ ${isf} = Z,U ⇒ <b>WU</b></li>
+      <li><b>${rapid} (cho):</b> CHO_totais ÷ ${icr} = X,U ⇒ <b>YU</b></li>
+      <li><b>Correção (glicemia):</b> (G – ${target}) ÷ ${isf} = Z,U ⇒ <b>WU</b></li>
       <!-- Se ${strat} == "regular_now", calcule e mostre a linha abaixo; caso contrário, escreva em itálico que não será aplicada agora -->
       <li><b>Insulina R (proteína/gordura):</b> pg_cho_equiv_g ÷ ${icr} = P,U ⇒ <b>QU</b></li>
       <li><b>Total bolus:</b>  ${rapid}(YU) + ${strat==="regular_now" ? "Regular(QU) = <b>TU</b>" : "Regular(não aplicável agora) = <b>YU</b>"} </li>
@@ -152,9 +167,9 @@ function systemPrompt(cfg) {
 
     <h3>✅ Resumo da dose</h3>
     <ul>
-      <li><b>${rapid} + Correção:</b> YU + WU = <b>TU</b></li>
+      <li><b>${rapid}:</b> YU + WU = <b>TU</b></li>
       ${strat === "regular_now" ? "<li><b>Insulina R:</b> QU</li>" : "<li><b>Insulina ${rapid} em 2 - 3 horas:</b> QU</li>"}
-      <li><b>Total bolus:</b> TU+QU</li>
+      <li><b>Total bolus:</b> TU+QU </li>
       <li><b>Calorias da refeição:</b> ≈ KK kcal</li>
     </ul>
   </div>
