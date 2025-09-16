@@ -153,55 +153,63 @@
     th { background: var(--thead); position: sticky; top:0; z-index:1; }
     .btn-del { background:#e11d48; color:#fff; border:none; padding:8px 10px; border-radius:10px; cursor:pointer; min-height:40px; }
 
-    .details-clean { border:1px solid var(--border); border-radius:10px; padding:10px; background:var(--card); }
-    .details-clean .table-wrap{
-      width: 100%;
-      max-height: 260px;             /* altura máxima do bloco de detalhes */
-      overflow: auto;                /* rolagem H e V só aqui */
-      -webkit-overflow-scrolling: touch;
-      scrollbar-gutter: stable;      /* evita pulo de layout quando aparece a barra */
+    .details-clean {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      background: var(--card);
+      overflow: hidden; /* Impede que conteúdo transborde */
     }
+    .details-clean .table-wrap {
+        width: 100%;
+        max-height: 260px;
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-gutter: stable;
+        margin: 8px 0;
+      }
 
-    .details-clean .gc-table {
-      min-width: 640px;              /* força largura mínima */
-      border-collapse: collapse;
-      font-size: 12px;
-      width:100%;
-    }
-    .details-clean .gc-table th, .details-clean .gc-table td{
-      border:1px solid var(--border); padding:.5rem .6rem; text-align:left;
-      white-space:nowrap; word-break:break-word; overflow-wrap:anywhere;
-    }
-    #detalhesHTML .table-wrap{
-      max-height:260px;
-      overflow:auto;
-      -webkit-overflow-scrolling:touch;
-      scrollbar-gutter:stable;
-    }
-    /* Fallback 1: se a IA esquecer o wrapper .table-wrap, forçamos scroll na PRÓPRIA tabela */
-    #detalhesHTML .details-clean > table.gc-table{
-      display: block;              /* permite overflow em table */
-      max-height: 260px;           /* mesma altura que você definiu para a table-wrap */
-      overflow: auto;              /* rolagem vertical e horizontal só na tabela */
-      -webkit-overflow-scrolling: touch;
-      width: 100%;
-    }
+      .details-clean .gc-table {
+        min-width: 640px;
+        border-collapse: collapse;
+        font-size: 12px;
+        width: 100%;
+      }
+      .details-clean .gc-table th,
+      .details-clean .gc-table td {
+        border: 1px solid var(--border);
+        padding: 0.5rem 0.6rem;
+        text-align: left;
+        white-space: nowrap;
+      }
+      .details-clean .gc-table th,
+      .details-clean .gc-table td {
+        border: 1px solid var(--border);
+        padding: 0.5rem 0.6rem;
+        text-align: left;
+        white-space: nowrap;
+      }
 
-    /* Mantém cabeçalho “colado” quando usamos o fallback em table */
-    #detalhesHTML .details-clean > table.gc-table thead th{
-      position: sticky;
-      top: 0;
-      z-index: 1;
-    }
+      /* Cabeçalho fixo quando há rolagem */
+      .details-clean .gc-table thead th {
+        position: sticky;
+        top: 0;
+        background: var(--thead);
+        z-index: 1;
+        box-shadow: 0 1px 0 var(--border);
+      }
 
-    /* Fallback 2: se o wrapper vier, mas sem a classe .details-clean, ainda assim limita */
-    #detalhesHTML .table-wrap{
-      max-height: 260px;
-      overflow: auto;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-gutter: stable;
-    }
-
+      /* Tamanho de fonte menor para mobile */
+      @media (max-width: 720px) {
+        .details-clean .gc-table {
+          font-size: 11px;
+        }
+        
+        .details-clean .gc-table th,
+        .details-clean .gc-table td {
+          padding: 4px 6px;
+        }
+    
     /* Fonte menor e célula mais compacta só nos detalhes técnicos */
     #detalhesHTML{ font-size: 12px; }
     #detalhesHTML .gc-table{ font-size: 11px; }
@@ -289,7 +297,7 @@
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.8.33/div>
+            <div>v1.8.34/div>
           </div>
         </div>
       </div>
@@ -609,7 +617,7 @@
   </nav>
 
   <script>
-    console.log('GlicoCerto v1.8.33 carregado', new Date().toISOString());
+    console.log('GlicoCerto v1.8.34 carregado', new Date().toISOString());
 
     // Ajuda: detecta se há sessão cacheada do Supabase no navegador
     function hasCachedSupabaseSession() {
@@ -1033,7 +1041,27 @@
         // ==== detalhes técnicos (limpa cercas/JSON) ====
         const raw   = d.detalhes_html || '';
         const clean = raw.replace(/```html|```/gi,'').replace(/<pre[\s\S]*?<\/pre>/gi,'').trim();
-        detalhesHTML.innerHTML = clean || '<em>Sem detalhes técnicos disponíveis.</em>';
+
+        // Função para garantir que todas as tabelas tenham scroll
+        function ensureTableScroll(html) {
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = html;
+          
+          const tables = tempDiv.querySelectorAll('table');
+          tables.forEach(table => {
+            if (!table.closest('.table-wrap')) {
+              const wrapper = document.createElement('div');
+              wrapper.className = 'table-wrap';
+              table.parentNode.insertBefore(wrapper, table);
+              wrapper.appendChild(table);
+            }
+          });
+          
+          return tempDiv.innerHTML;
+        }
+
+        const processedHtml = ensureTableScroll(clean);
+        detalhesHTML.innerHTML = processedHtml || '<em>Sem detalhes técnicos disponíveis.</em>';
         // garante scroll horizontal na tabela de detalhes
         const tb = detalhesHTML.querySelector('table');
         if (tb && !tb.parentElement.classList.contains('table-wrap')) {
