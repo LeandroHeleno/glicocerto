@@ -76,6 +76,9 @@ function withTimeout(promise, ms = 45000, label = "Timeout") {
   ]);
 }
 // ---- System prompt para análise de refeição ----
+// ---- System prompt para análise de refeição ----
+// ---- System prompt para análise de refeição ----
+// ---- System prompt para análise de refeição ----
 function systemPrompt(cfg) {
   const icr     = Number(cfg?.icr || cfg?.insulina_cho || 10);     // g CHO por 1U
   const isf     = Number(cfg?.isf || cfg?.glicose_insulina || 50); // mg/dL por 1U
@@ -127,32 +130,22 @@ function systemPrompt(cfg) {
         <tbody>
           <!-- Uma linha por item identificado -->
           <!-- Exemplo:
-          <tr><td>Arroz branco</td><td>100g</td><td>28g</td><td>~130 kcal</td><td>70g</td><td>18g</td></tr>
+          <tr><td>Arroz branco</td><td>100g</td><td>28g</td><td>~130 kcal</td><td>7g</td><td>1g</td></tr>
           -->
         </tbody>
       </table>
     </div>
     <h3>📊 Totais</h3>
-   <ul>
-      <!-- Carboidratos diretos -->
-      <li><b>CHO:</b> soma dos carboidratos dos alimentos = <b>${carb_total_g} g CHO</b></li>
-
-      <!-- Proteína -->
-      <li><b>Proteínas:</b> soma = <b>${protein_total_g} g</b></li>
-
-      <!-- Gordura -->
-      <li><b>Gorduras:</b> soma = <b>${fat_total_g} g</b></li>
-
-      <!-- Proteína + Gordura convertidos em CHO (modelo SBD) -->
+    <ul>
+      <!-- Escreva a soma mostrando a conta -->
+      <li><b>Carboidratos:</b> a + b + c = <b>XX g CHO</b></li>
+      <li><b>Proteínas:</b> some todas as proteínas dos itens ≈ <b>YY g</b></li>
+      <li><b>Gorduras:</b> some todas as gorduras dos itens ≈ <b>ZZ g</b></li>
       <li>
-        <b>Proteínas + Gorduras:</b><br>
-        Proteína: ${protein_total_g} × 4 = ${prot_kcal} kcal<br>
-        Gordura: ${fat_total_g} × 9 = ${fat_kcal} kcal<br>
-        Aplicando fatores SBD:<br>
-        • Proteína: ${prot_kcal} × (${protPct}/100) = ${prot_adj_kcal} kcal<br>
-        • Gordura: ${fat_kcal} × 0.10 = ${fat_adj_kcal} kcal<br>
-        Soma ajustada: ${prot_adj_kcal} + ${fat_adj_kcal} = <b>${pg_kcal_adj} kcal</b><br>
-        Equivalente CHO: ${pg_kcal_adj} ÷ 10 = <b>${pg_cho_equiv_g} g CHO</b>
+        <b>Proteínas + Gorduras (equivalente CHO):</b><br>
+        Proteína: (YY g) × 4 = KCAL_P<br>
+        Gordura: (ZZ g) × 9 = KCAL_G<br>
+        Aplique ${pgPct}% sobre (KCAL_P + KCAL_G) e depois ÷ 10 → <b>EQ_PG g CHO</b>
       </li>
     </ul>
 
@@ -168,7 +161,7 @@ function systemPrompt(cfg) {
     <h3>✅ Resumo da dose</h3>
     <ul>
       <li><b>${rapid}:</b> YU + WU = <b>TU</b></li>
-      ${strat === "regular_now" ? "<li><b>Insulina R:</b> QU</li>" : "<li><b>Insulina ${rapid} em 2 - 3 horas:</b> QU</li>"}
+      ${strat === "regular_now" ? "<li><b>Insulina R:</b> QU</li>" : "<li><b>Insulina " + rapid + " em 2 - 3 horas:</b> QU</li>"}
       <li><b>Total bolus:</b> TU+QU </li>
       <li><b>Calorias da refeição:</b> ≈ KK kcal</li>
     </ul>
@@ -199,6 +192,8 @@ function systemPrompt(cfg) {
   - Nunca use cercas de código (sem \`\`\`), apenas HTML + o <pre>{...}</pre> final.
   `;
 }
+
+
 
 
 // Extrai JSON do <pre>…</pre> (carbo_g, pg_cho_equiv_g, resumo)
