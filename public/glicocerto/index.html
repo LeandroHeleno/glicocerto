@@ -154,10 +154,12 @@
     .btn-del { background:#e11d48; color:#fff; border:none; padding:8px 10px; border-radius:10px; cursor:pointer; min-height:40px; }
 
     .details-clean { border:1px solid var(--border); border-radius:10px; padding:10px; background:var(--card); }
-    .details-clean .table-wrap {
+    .details-clean .table-wrap{
       width: 100%;
-      overflow-x: auto;              /* ativa barra horizontal */
+      max-height: 260px;             /* altura máxima do bloco de detalhes */
+      overflow: auto;                /* rolagem H e V só aqui */
       -webkit-overflow-scrolling: touch;
+      scrollbar-gutter: stable;      /* evita pulo de layout quando aparece a barra */
     }
 
     .details-clean .gc-table {
@@ -166,9 +168,28 @@
       font-size: 12px;
       width:100%;
     }
-.details-clean .gc-table th, .details-clean .gc-table td{
+    .details-clean .gc-table th, .details-clean .gc-table td{
       border:1px solid var(--border); padding:.5rem .6rem; text-align:left;
       white-space:nowrap; word-break:break-word; overflow-wrap:anywhere;
+    }
+
+    /* Fonte menor e célula mais compacta só nos detalhes técnicos */
+    #detalhesHTML{ font-size: 12px; }
+    #detalhesHTML .gc-table{ font-size: 11px; }
+    #detalhesHTML h3{ font-size: 13px; margin: 8px 0; }
+
+    /* Células mais “slim” nessa tabela */
+    #detalhesHTML .gc-table th,
+    #detalhesHTML .gc-table td{
+      padding: 6px 8px;
+    }
+
+    /* No mobile, ainda mais compacto */
+    @media (max-width: 720px){
+      #detalhesHTML{ font-size: 11.5px; }
+      #detalhesHTML .gc-table{ font-size: 10.5px; }
+      #detalhesHTML .gc-table th,
+      #detalhesHTML .gc-table td{ padding: 5px 6px; }
     }
 
 
@@ -239,7 +260,7 @@
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.8.30</div>
+            <div>v1.8.31</div>
           </div>
         </div>
       </div>
@@ -559,7 +580,7 @@
   </nav>
 
   <script>
-    console.log('GlicoCerto v1.8.30 carregado', new Date().toISOString());
+    console.log('GlicoCerto v1.8.31 carregado', new Date().toISOString());
 
     // Ajuda: detecta se há sessão cacheada do Supabase no navegador
     function hasCachedSupabaseSession() {

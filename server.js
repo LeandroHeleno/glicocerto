@@ -138,7 +138,7 @@ function systemPrompt(cfg) {
       <li><b>Carboidratos:</b>  a + b + c... = <b>XX g CHO</b></li>
       <li><b>Proteínas</b>  Liste a soma de todos os valores de proteinas dos alimentos ≈ <b>YY kcal</b></li>
       <li><b>Gorduras</b>   Liste a soma de todos os valores de gorduras dos alimentos ≈ <b>YY kcal</b></li>
-      <li><b>Proteínas+Gorduras</b>  p + g ≈ <b>YY kcal</b> ÷ 10 = XX CHO ⇒ x CHO </li>
+      <li><b>Proteínas+Gorduras</b>  (p x 4) + (g x 9) ≈ <b>YY kcal</b> ÷ 10 = XX CHO ⇒ x CHO </li>
     </ul>
 
     <h3>💉 Insulina</h3>
@@ -154,7 +154,7 @@ function systemPrompt(cfg) {
     <ul>
       <li><b>${rapid} + Correção:</b> YU + WU = <b>TU</b></li>
       ${strat === "regular_now" ? "<li><b>Insulina R:</b> QU</li>" : "<li><b>Insulina ${rapid} em 2 - 3 horas:</b> QU</li>"}
-      <li><b>Total bolus:</b> TU</li>
+      <li><b>Total bolus:</b> TU+QU</li>
       <li><b>Calorias da refeição:</b> ≈ KK kcal</li>
     </ul>
   </div>
