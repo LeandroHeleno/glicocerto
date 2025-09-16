@@ -156,70 +156,79 @@
     .details-clean {
       border: 1px solid var(--border);
       border-radius: 10px;
-      padding: 10px;
+      padding: 12px;
       background: var(--card);
-      overflow: hidden; /* Impede que conteúdo transborde */
+      overflow: hidden;
+      margin: 8px 0;
     }
-    .details-clean .table-wrap {
-        width: 100%;
-        max-height: 260px;
-        overflow: auto;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-gutter: stable;
-        margin: 8px 0;
-      }
 
-      .details-clean .gc-table {
-        min-width: 640px;
-        border-collapse: collapse;
-        font-size: 12px;
-        width: 100%;
+    .details-clean .table-wrap {
+      width: 100%;
+      max-height: 260px;
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-gutter: stable;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin: 10px 0;
+    }
+
+    .details-clean .gc-table {
+      min-width: 640px;
+      border-collapse: collapse;
+      font-size: 12px;
+      width: 100%;
+      margin: 0;
+    }
+
+    .details-clean .gc-table th,
+    .details-clean .gc-table td {
+      border: 1px solid var(--border);
+      padding: 8px 10px;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    /* Cabeçalho fixo durante a rolagem */
+    .details-clean .gc-table thead th {
+      position: sticky;
+      top: 0;
+      background: var(--thead);
+      z-index: 2;
+      font-weight: 600;
+      box-shadow: 0 1px 0 var(--border);
+    }
+
+    .details-clean h3 {
+      margin: 0 0 12px 0;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    /* Responsividade para mobile */
+    @media (max-width: 720px) {
+      .details-clean {
+        padding: 10px;
       }
+      
+      .details-clean .table-wrap {
+        max-height: 220px;
+      }
+      
+      .details-clean .gc-table {
+        font-size: 11px;
+        min-width: 580px;
+      }
+      
       .details-clean .gc-table th,
       .details-clean .gc-table td {
-        border: 1px solid var(--border);
-        padding: 0.5rem 0.6rem;
-        text-align: left;
-        white-space: nowrap;
+        padding: 6px 8px;
       }
-
-      /* Cabeçalho fixo quando há rolagem */
-      .details-clean .gc-table thead th {
-        position: sticky;
-        top: 0;
-        background: var(--thead);
-        z-index: 1;
-        box-shadow: 0 1px 0 var(--border);
+      
+      .details-clean h3 {
+        font-size: 13px;
       }
-
-      /* Tamanho de fonte menor para mobile */
-      @media (max-width: 720px) {
-        .details-clean .gc-table {
-          font-size: 11px;
-        }
-        
-        .details-clean .gc-table th,
-        .details-clean .gc-table td {
-          padding: 4px 6px;
-        }
-      }
-    /* Fonte menor e célula mais compacta só nos detalhes técnicos */
-    #detalhesHTML{ font-size: 12px; }
-    #detalhesHTML .gc-table{ font-size: 11px; }
-    #detalhesHTML h3{ font-size: 13px; margin: 8px 0; }
-
-    /* Células mais “slim” nessa tabela */
-    #detalhesHTML .gc-table th,
-    #detalhesHTML .gc-table td{
-      padding: 6px 8px;
-    }
-
-    /* No mobile, ainda mais compacto */
-    @media (max-width: 720px){
-      #detalhesHTML{ font-size: 11.5px; }
-      #detalhesHTML .gc-table{ font-size: 10.5px; }
-      #detalhesHTML .gc-table th,
-      #detalhesHTML .gc-table td{ padding: 5px 6px; }
     }
 
 
@@ -290,7 +299,7 @@
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.8.34/div>
+            <div>v1.8.36/div>
           </div>
         </div>
       </div>
@@ -610,7 +619,7 @@
   </nav>
 
   <script>
-    console.log('GlicoCerto v1.8.34 carregado', new Date().toISOString());
+    console.log('GlicoCerto v1.8.36 carregado', new Date().toISOString());
 
     // Ajuda: detecta se há sessão cacheada do Supabase no navegador
     function hasCachedSupabaseSession() {
@@ -1042,12 +1051,21 @@
           
           const tables = tempDiv.querySelectorAll('table');
           tables.forEach(table => {
-            if (!table.closest('.table-wrap')) {
-              const wrapper = document.createElement('div');
-              wrapper.className = 'table-wrap';
-              table.parentNode.insertBefore(wrapper, table);
-              wrapper.appendChild(table);
+            // Remove qualquer wrapper existente para evitar duplicação
+            if (table.parentElement.classList.contains('table-wrap')) {
+              const parent = table.parentElement;
+              parent.parentNode.insertBefore(table, parent);
+              parent.parentNode.removeChild(parent);
             }
+            
+            // Cria novo wrapper
+            const wrapper = document.createElement('div');
+            wrapper.className = 'table-wrap';
+            table.parentNode.insertBefore(wrapper, table);
+            wrapper.appendChild(table);
+            
+            // Garante que a tabela tenha a classe gc-table
+            table.classList.add('gc-table');
           });
           
           return tempDiv.innerHTML;
@@ -1055,16 +1073,6 @@
 
         const processedHtml = ensureTableScroll(clean);
         detalhesHTML.innerHTML = processedHtml || '<em>Sem detalhes técnicos disponíveis.</em>';
-        // garante scroll horizontal na tabela de detalhes
-        const tb = detalhesHTML.querySelector('table');
-        if (tb && !tb.parentElement.classList.contains('table-wrap')) {
-          const wrap = document.createElement('div');
-          wrap.className = 'table-wrap';
-          tb.parentNode.insertBefore(wrap, tb);
-          wrap.appendChild(tb);
-          // se quiser, marca a tabela como 'gc-table' para aplicar min-width 600px
-          tb.classList.add('gc-table');
-        }
 
         detalhesBox.style.display = 'block';
         detalhesBox.open = false;
