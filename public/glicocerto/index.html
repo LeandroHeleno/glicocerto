@@ -82,6 +82,8 @@
       box-shadow: 0 1px 1px rgba(0,0,0,.02);
     }
 
+    .subcards > * { min-width: 0; min-height: 0; }
+
     .subcard h3{
       margin:0 0 8px;
       font-size:14px;
@@ -279,7 +281,7 @@
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.8.38</div>
+            <div>v1.8.39</div>
           </div>
         </div>
       </div>
@@ -599,7 +601,7 @@
   </nav>
 
   <script>
-    console.log('GlicoCerto v1.8.38 carregado', new Date().toISOString());
+    console.log('GlicoCerto v1.8.39 carregado', new Date().toISOString());
 
     // Ajuda: detecta se há sessão cacheada do Supabase no navegador
     function hasCachedSupabaseSession() {

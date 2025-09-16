@@ -122,12 +122,12 @@ function systemPrompt(cfg) {
     <div class="table-wrap">
       <table class="gc-table">
         <thead>
-          <tr><th>Alimento</th><th>Quantidade</th><th>CHO</th><th>kcal aprox</th></tr>
+          <tr><th>Alimento</th><th>Quantidade</th><th>CHO</th><th>kcal aprox</th><th>Proteína</th><th>Gordura</th></tr>
         </thead>
         <tbody>
           <!-- Uma linha por item identificado -->
           <!-- Exemplo:
-          <tr><td>Arroz branco</td><td>100g</td><td>28g</td><td>~130 kcal</td></tr>
+          <tr><td>Arroz branco</td><td>100g</td><td>28g</td><td>~130 kcal</td><td>70g</td><td>18g</td></tr>
           -->
         </tbody>
       </table>
