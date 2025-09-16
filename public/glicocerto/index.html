@@ -154,9 +154,18 @@
     .btn-del { background:#e11d48; color:#fff; border:none; padding:8px 10px; border-radius:10px; cursor:pointer; min-height:40px; }
 
     .details-clean { border:1px solid var(--border); border-radius:10px; padding:10px; background:var(--card); }
-    .details-clean .table-wrap { max-width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; }
-    .details-clean .gc-table { width:100%; border-collapse:collapse; font-size:14px; table-layout:auto; }
-    .details-clean .gc-table th, .details-clean .gc-table td{
+    .details-clean .table-wrap {
+      width: 100%;
+      overflow-x: auto;              /* ativa barra horizontal */
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .details-clean .gc-table {
+      min-width: 600px;              /* força largura mínima */
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+.details-clean .gc-table th, .details-clean .gc-table td{
       border:1px solid var(--border); padding:6px 8px; text-align:left;
       white-space:normal; word-break:break-word; overflow-wrap:anywhere;
     }
@@ -912,6 +921,17 @@
         const raw   = d.detalhes_html || '';
         const clean = raw.replace(/```html|```/gi,'').replace(/<pre[\s\S]*?<\/pre>/gi,'').trim();
         detalhesHTML.innerHTML = clean || '<em>Sem detalhes técnicos disponíveis.</em>';
+        // garante scroll horizontal na tabela de detalhes
+        const tb = detalhesHTML.querySelector('table');
+        if (tb && !tb.parentElement.classList.contains('table-wrap')) {
+          const wrap = document.createElement('div');
+          wrap.className = 'table-wrap';
+          tb.parentNode.insertBefore(wrap, tb);
+          wrap.appendChild(tb);
+          // se quiser, marca a tabela como 'gc-table' para aplicar min-width 600px
+          tb.classList.add('gc-table');
+        }
+
         detalhesBox.style.display = 'block';
         detalhesBox.open = false;
 

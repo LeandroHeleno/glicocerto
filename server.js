@@ -63,10 +63,11 @@ function withTimeout(promise, ms = 45000, label = "Timeout") {
 }
 // ---- System prompt para análise de refeição ----
 function systemPrompt(cfg) {
-  const icr    = Number(cfg?.icr || cfg?.insulina_cho || 10);   // g CHO por 1U
-  const isf    = Number(cfg?.isf || cfg?.glicose_insulina || 50); // mg/dL por 1U
-  const target = Number(cfg?.target || 100);                      // mg/dL
-  const strat  = (cfg?.pg_strategy || "regular_now").trim();      // proteína+gordura
+  const icr     = Number(cfg?.icr || cfg?.insulina_cho || 10);     // g CHO por 1U
+  const isf     = Number(cfg?.isf || cfg?.glicose_insulina || 50); // mg/dL por 1U
+  const target  = Number(cfg?.target || 100);                      // mg/dL
+  const strat   = (cfg?.pg_strategy || "regular_now").trim();      // "regular_now" ou "split_rapid"
+  const pgPct   = Math.max(0, Math.min(100, Number(cfg?.pg_percent ?? 100))); // %
 
   return `
   Você é um assistente para contagem de carboidratos e cálculo de bolus em diabetes (pt-BR).
@@ -77,8 +78,15 @@ function systemPrompt(cfg) {
   • ICR (g/1U): ${icr}
   • ISF (mg/dL/1U): ${isf}
   • Glicemia alvo: ${target} mg/dL
-  • Estratégia proteína+gordura: ${strat}  (se "regular_now", calcule dose com Insulina Regular agora; caso contrário, apenas informe que não será aplicada agora)
+  • Estratégia proteína+gordura: ${strat}  
+  • pg_percent (% das kcal de proteína+gordura a considerar): ${pgPct}%
+  Regras para proteína+gordura:
+  - Calcule energia de proteína e gordura: kcal_pg = proteina_total_g*4 + gordura_total_g*9.
+  - Calcule equivalente CHO: pg_cho_equiv_g = round( (kcal_pg * (${pgPct}/100)) / 10 , 1 ).
+  - Se ${strat} == "regular_now": mostre dose com Insulina Regular = pg_cho_equiv_g ÷ ${icr}.
+  - Se ${strat} == "split_rapid": não usar Regular; informe dose equivalente a proteina e gorduras separada da dose de cho (informe para aplicar de 2–3h depois da refeição), mas mantenha o valor de pg_cho_equiv_g no JSON.
 
+ 
   TAREFAS
   1) Identificar/estimar os itens da refeição (texto ou foto), com quantidades.
   2) Para cada item, estimar:
@@ -164,11 +172,12 @@ function systemPrompt(cfg) {
 
 // Extrai JSON do <pre>…</pre> (carbo_g, pg_cho_equiv_g, resumo)
 // Substitua a função inteira por esta
+// server.js — perto do topo, utilidades
 function pickFromPre(html) {
   let carbo_g = 0, pg_cho_equiv_g = 0, resumo = "";
   const parseNum = (v) => {
     if (v == null) return 0;
-    const s = String(v).replace(/\./g, '').replace(',', '.'); // 12,5 -> 12.5 ; 1.234,5 -> 1234.5
+    const s = String(v).replace(/\./g, '').replace(',', '.'); // "1.234,5" -> "1234.5"
     const n = parseFloat(s);
     return Number.isFinite(n) ? n : 0;
   };
@@ -177,19 +186,63 @@ function pickFromPre(html) {
     if (m && m[1]) {
       const j = JSON.parse(m[1]);
 
-      // chaves aceitáveis para carboidrato
-      const carboKeys = ["carbo_g", "carbo_liquido_g", "carbo_liquidos_g", "cho_g"];
-      for (const k of carboKeys) if (k in j) { carbo_g = parseNum(j[k]); break; }
-
-      // chaves aceitáveis para proteína+gordura em CHO equivalente
-      const pgKeys = ["pg_cho_equiv_g", "pg_cho_equiv", "pg_eq_g", "pg_eq", "pg_cho_g"];
-      for (const k of pgKeys) if (k in j) { pg_cho_equiv_g = parseNum(j[k]); break; }
-
+      // chaves possíveis
+      for (const k of ["carbo_g","carbo_liquido_g","carbo_liquidos_g","cho_g"]) {
+        if (k in j) { carbo_g = parseNum(j[k]); break; }
+      }
+      for (const k of ["pg_cho_equiv_g","pg_cho_equiv","pg_eq_g","pg_eq","pg_cho_g"]) {
+        if (k in j) { pg_cho_equiv_g = parseNum(j[k]); break; }
+      }
       if ("resumo" in j) resumo = String(j.resumo || "");
     }
   } catch {}
   return { carbo_g, pg_cho_equiv_g, resumo };
 }
+// Tenta extrair proteína e gordura (em g) do HTML dos detalhes (tabela ou linhas tipo "Proteína total: X g")
+function computePgFromHtml(html, percent = 1.0) {
+  const txt = String(html || "");
+  const toNum = (s) => {
+    const n = parseFloat(String(s).replace(/\./g,'').replace(',','.'));
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  let protG = 0, gordG = 0;
+
+  // 1) Procura "Proteína total: 15 g" / "Gordura total: 30 g"
+  const mProt = txt.match(/prote[ií]na(?:\s+total)?\s*[:\-]?\s*([\d\.,]+)\s*g/i);
+  const mGord = txt.match(/gordura(?:\s+total)?\s*[:\-]?\s*([\d\.,]+)\s*g/i);
+  if (mProt) protG = toNum(mProt[1]);
+  if (mGord) gordG = toNum(mGord[1]);
+
+  // 2) Se não achou totais, soma por linhas da tabela (qualquer coluna com "prote" e "gordu/total fat")
+  if (!(protG>0) || !(gordG>0)) {
+    // pega linhas da tabela: <tr>...</tr>
+    const rows = txt.match(/<tr[\s\S]*?<\/tr>/gi) || [];
+    let pSum = 0, gSum = 0;
+    for (const row of rows) {
+      // captura células
+      const cells = Array.from(row.matchAll(/<t[hd][^>]*>([\s\S]*?)<\/t[hd]>/gi)).map(m=>m[1]);
+      if (cells.length < 2) continue;
+      // tenta mapear pelos cabeçalhos quando presentes
+      const header = cells.map(c => c.replace(/<[^>]+>/g,'').trim().toLowerCase());
+      // heurística: procura campos que parecem números com "g"
+      for (let i=0; i<cells.length; i++) {
+        const plain = header[i];
+        const val   = toNum(cells[i].replace(/<[^>]+>/g,'').match(/([\d\.,]+)/)?.[1] || "");
+        if (!val) continue;
+        if (/prote/i.test(plain)) pSum += val;
+        if (/gordu|fat/i.test(plain)) gSum += val;
+      }
+    }
+    if (pSum>0) protG = protG || pSum;
+    if (gSum>0) gordG = gordG || gSum;
+  }
+
+  const kcal = protG*4 + gordG*9;
+  const choEq = (kcal * (percent||1)) / 10;  // 10 kcal = 1 g CHO-equivalente
+  return { protG, gordG, choEq };
+}
+
 
 /* ======================== ENV ======================== */
 app.get("/api/env", (req, res) => {
@@ -344,6 +397,14 @@ app.post("/api/chat", async (req, res) => {
       carbo_g = parsed.carbo_g;
       pg_cho_equiv_g = parsed.pg_cho_equiv_g;
       if (parsed.resumo) refeicao_resumo = parsed.resumo;
+
+      // === Fallback P+G (a partir do HTML/tabela) ===
+      const percent = Math.max(0, Math.min(100, Number(cfg?.pg_percent ?? 100))) / 100;
+      if (!(pg_cho_equiv_g > 0)) {
+        const { choEq } = computePgFromHtml(detalhes_html, percent);
+        pg_cho_equiv_g = choEq;
+      }
+      // ==============================================
     } else {
       detalhes_html = "<em>Análise automática indisponível.</em>";
     }
@@ -402,6 +463,7 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
+
 /* ===================== CHAT (IMAGEM) ===================== */
 app.post("/api/chat-image", async (req, res) => {
   try {
@@ -446,6 +508,14 @@ app.post("/api/chat-image", async (req, res) => {
       carbo_g = parsed.carbo_g;
       pg_cho_equiv_g = parsed.pg_cho_equiv_g;
       if (parsed.resumo) refeicao_resumo = parsed.resumo;
+
+      // === Fallback P+G (a partir do HTML/tabela) ===
+      const percent = Math.max(0, Math.min(100, Number(cfg?.pg_percent ?? 100))) / 100;
+      if (!(pg_cho_equiv_g > 0)) {
+        const { choEq } = computePgFromHtml(detalhes_html, percent);
+        pg_cho_equiv_g = choEq;
+      }
+      // ==============================================
     } else {
       detalhes_html = "<em>Análise automática indisponível.</em>";
       refeicao_resumo = String(message || "[foto]").trim();
@@ -522,6 +592,7 @@ app.post("/api/chat-image", async (req, res) => {
     });
   }
 });
+
 
 /* ===================== HISTÓRICO ===================== */
 app.get("/api/refeicoes", async (req, res) => {
