@@ -70,15 +70,18 @@
 
     .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow: 0 1px 2px rgba(0,0,0,.03); margin-bottom:12px; }
     /* --- Subcards do Chat --- */
-    .subcards { display:grid; gap:12px; }
+    .subcards { display:grid; gap:6px; }
+
+    .subcards > * { min-width: 0; min-height: 0; }
+
     @media (min-width: 720px){
       .subcards { grid-template-columns: 1fr 1fr; }
-    }
+    }C
     .subcard {
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: 14px;
-      padding: 14px;
+      padding: 8px;
       box-shadow: 0 1px 1px rgba(0,0,0,.02);
     }
 
@@ -141,7 +144,7 @@
 
     .muted { color:var(--muted); font-size:12px; }
     .note{background:#fff3cd;border:1px solid #ffeeba;color:#856404;padding:10px;border-radius:10px;margin-top:10px;}
-    .resumo { white-space:pre-wrap; background:var(--card); color:var(--text); border:1px solid var(--border); border-radius:10px; padding:12px; margin-top:12px; }
+    .resumo { white-space:pre-wrap; background:var(--card); color:var(--text); border:1px solid var(--border); border-radius:10px;  padding:8px; margin-top:8px; font-size:12px;}
     .resumo strong{ font-weight:800 }
     .disclaimer { margin-top:10px; font-size:12px; color:#666; }
     details summary { cursor:pointer; user-select:none; }
@@ -162,6 +165,7 @@
       background: var(--card);
       overflow: hidden;
       margin: 8px 0;
+      font-size:12px; 
     }
 
     .details-clean .table-wrap {
@@ -180,13 +184,15 @@
       border-collapse: collapse;
       font-size: 12px;
       width: 100%;
+      font-size: inherit;
+      width: max-content;
       margin: 0;
     }
 
     .details-clean .gc-table th,
     .details-clean .gc-table td {
       border: 1px solid var(--border);
-      padding: 8px 10px;
+      padding: 6px 8px;
       text-align: left;
       white-space: nowrap;
     }
@@ -208,10 +214,10 @@
       color: var(--text);
     }
 
-    /* Responsividade para mobile */
+    /* Responsividade para mobile 
     @media (max-width: 720px) {
       .details-clean .gc-table { min-width: 720px; }
-    }
+    }*/
 
 
     .bottom-nav{ position:fixed; left:0; right:0; bottom:0; height:64px; background:var(--card); border-top:1px solid var(--border); display:none; align-items:center; justify-content:space-around; z-index:200; }
@@ -281,7 +287,7 @@
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.8.39</div>
+            <div>v1.8.40</div>
           </div>
         </div>
       </div>
@@ -601,7 +607,7 @@
   </nav>
 
   <script>
-    console.log('GlicoCerto v1.8.39 carregado', new Date().toISOString());
+    console.log('GlicoCerto v1.8.40 carregado', new Date().toISOString());
 
     // Ajuda: detecta se há sessão cacheada do Supabase no navegador
     function hasCachedSupabaseSession() {
