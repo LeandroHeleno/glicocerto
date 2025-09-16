@@ -178,6 +178,30 @@
       -webkit-overflow-scrolling:touch;
       scrollbar-gutter:stable;
     }
+    /* Fallback 1: se a IA esquecer o wrapper .table-wrap, forçamos scroll na PRÓPRIA tabela */
+    #detalhesHTML .details-clean > table.gc-table{
+      display: block;              /* permite overflow em table */
+      max-height: 260px;           /* mesma altura que você definiu para a table-wrap */
+      overflow: auto;              /* rolagem vertical e horizontal só na tabela */
+      -webkit-overflow-scrolling: touch;
+      width: 100%;
+    }
+
+    /* Mantém cabeçalho “colado” quando usamos o fallback em table */
+    #detalhesHTML .details-clean > table.gc-table thead th{
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    /* Fallback 2: se o wrapper vier, mas sem a classe .details-clean, ainda assim limita */
+    #detalhesHTML .table-wrap{
+      max-height: 260px;
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-gutter: stable;
+    }
+
     /* Fonte menor e célula mais compacta só nos detalhes técnicos */
     #detalhesHTML{ font-size: 12px; }
     #detalhesHTML .gc-table{ font-size: 11px; }
@@ -265,7 +289,7 @@
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.8.32</div>
+            <div>v1.8.33/div>
           </div>
         </div>
       </div>
@@ -585,7 +609,7 @@
   </nav>
 
   <script>
-    console.log('GlicoCerto v1.8.32 carregado', new Date().toISOString());
+    console.log('GlicoCerto v1.8.33 carregado', new Date().toISOString());
 
     // Ajuda: detecta se há sessão cacheada do Supabase no navegador
     function hasCachedSupabaseSession() {
