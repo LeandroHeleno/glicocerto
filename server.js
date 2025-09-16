@@ -51,43 +51,6 @@ function supabaseFromReq(req) {
 function num(s){ const n = parseFloat(String(s).replace(/\./g,'').replace(',','.')); return Number.isFinite(n)?n:0; }
 
 
-  // 1) Tentar THEAD/TBODY com índices de coluna
-  const thead = txt.match(/<thead[\s\S]*?<\/thead>/i)?.[0]||"";
-  const headers = Array.from(thead.matchAll(/<th[^>]*>([\s\S]*?)<\/th>/gi)).map(m=>m[1].replace(/<[^>]+>/g,'').trim().toLowerCase());
-  let iP = headers.findIndex(h=>/prote/i.test(h));
-  let iG = headers.findIndex(h=>/(gordu|fat)/i.test(h));
-  const tbody = txt.match(/<tbody[\s\S]*?<\/tbody>/i)?.[0]||"";
-  if(tbody && (iP>=0 || iG>=0)){
-    const rows = Array.from(tbody.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)).map(m=>m[1]);
-    for(const row of rows){
-      const cols = Array.from(row.matchAll(/<t[hd][^>]*>([\s\S]*?)<\/t[hd]>/gi)).map(m=>m[1].replace(/<[^>]+>/g,'').trim());
-      if(iP>=0 && cols[iP]) p += num(cols[iP].match(/([\d\.,]+)/)?.[1]||0);
-      if(iG>=0 && cols[iG]) g += num(cols[iG].match(/([\d\.,]+)/)?.[1]||0);
-    }
-  }
-
-  // 2) Heurística de backup (procura “proteína … g” / “gordura … g” nas células)
-  if(!(p>0) || !(g>0)){
-    const rows = txt.match(/<tr[\s\S]*?<\/tr>/gi)||[];
-    let p2=0,g2=0;
-    for(const row of rows){
-      const cells = Array.from(row.matchAll(/<t[hd][^>]*>([\s\S]*?)<\/t[hd]>/gi)).map(m=>m[1].replace(/<[^>]+>/g,''));
-      for(const c of cells){
-        const low = c.toLowerCase();
-        const val = num(low.match(/([\d\.,]+)\s*g/)?.[1]||0);
-        if(/prote/i.test(low)) p2+=val;
-        if(/gordu|fat/i.test(low)) g2+=val;
-      }
-    }
-    if(p2>0) p = p || p2;
-    if(g2>0) g = g || g2;
-  }
-
-  const kcalP = p*4, kcalG = g*9, kcal = kcalP + kcalG;
-  const choEq = (kcal * (percent||1)) / 10;
-  return { p, g, kcalP, kcalG, kcal, choEq };
-}
-
 // Reescreve/insere a linha dos Totais com as CONTAS numéricas
 function patchPgTotals(html, p, g, kcalP, kcalG, kcal, choEq){
   const lp = `Proteínas: ${Math.round(p)}g ×4 = ${Math.round(kcalP)} kcal`;
@@ -172,8 +135,10 @@ function systemPrompt(cfg) {
     <h3>📊 Totais</h3>
     <ul>
       <!-- Escreva a soma mostrando a conta -->
-      <li><b>Carboidratos:</b>  a + b + c = <b>XX g CHO</b></li>
-      <li><b>Proteínas/gorduras:</b>  descrição sucinta (ex.: "bife + óleo da preparação") ≈ <b>YY kcal</b></li>
+      <li><b>Carboidratos:</b>  a + b + c... = <b>XX g CHO</b></li>
+      <li><b>Proteínas</b>  Liste a soma de todos os valores de proteinas dos alimentos ≈ <b>YY kcal</b></li>
+      <li><b>Gorduras</b>   Liste a soma de todos os valores de gorduras dos alimentos ≈ <b>YY kcal</b></li>
+      <li><b>Proteínas+Gorduras</b>  p + g ≈ <b>YY kcal</b> ÷ 10 = XX CHO ⇒ x CHO </li>
     </ul>
 
     <h3>💉 Insulina</h3>
