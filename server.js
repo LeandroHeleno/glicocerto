@@ -68,7 +68,7 @@ function systemPrompt(cfg) {
   const target  = Number(cfg?.target || 100);                      // mg/dL
   const strat   = (cfg?.pg_strategy || "regular_now").trim();      // "regular_now" ou "split_rapid"
   const pgPct   = Math.max(0, Math.min(100, Number(cfg?.pg_percent ?? 100))); // %
-
+  const rapid = String(cfg?.insulina_rapida || 'Fiasp');
   return `
   Você é um assistente para contagem de carboidratos e cálculo de bolus em diabetes (pt-BR).
   Use as regras e valores do manual de contagem de carboidrato da SBD (sociedade Brasileira de Diabetes) e entregue **HTML puro** (sem Markdown) com as seções abaixo.
@@ -127,17 +127,18 @@ function systemPrompt(cfg) {
 
     <h3>💉 Insulina</h3>
     <ul>
-      <li><b>Humalog (carboidrato):</b> CHO_totais ÷ ${icr} = X,U ⇒ <b>YU</b></li>
+      <li><b>${rapid} (carboidrato):</b> CHO_totais ÷ ${icr} = X,U ⇒ <b>YU</b></li>
       <li><b>Correção (glicemia G):</b> (G – ${target}) ÷ ${isf} = Z,U ⇒ <b>WU</b></li>
       <!-- Se ${strat} == "regular_now", calcule e mostre a linha abaixo; caso contrário, escreva em itálico que não será aplicada agora -->
       <li><b>Insulina R (proteína/gordura):</b> pg_cho_equiv_g ÷ ${icr} = P,U ⇒ <b>QU</b></li>
-      <li><b>Total bolus:</b>  Humalog(YU) + ${strat==="regular_now" ? "Regular(QU) = <b>TU</b>" : "Regular(não aplicável agora) = <b>YU</b>"} </li>
+      <li><b>Total bolus:</b>  ${rapid}(YU) + ${strat==="regular_now" ? "Regular(QU) = <b>TU</b>" : "Regular(não aplicável agora) = <b>YU</b>"} </li>
     </ul>
 
     <h3>✅ Resumo da dose</h3>
     <ul>
-      <li><b>Humalog:</b> YU</li>
-      ${strat === "regular_now" ? "<li><b>Insulina R:</b> QU</li>" : "<li><i>Insulina R não aplicada agora</i></li>"}
+      <li><b>${rapid}:</b> YU</li>
+      <li><b>${rapid} + Correção:</b> YU + WU = <b>TU</b></li>
+      ${strat === "regular_now" ? "<li><b>Insulina R:</b> QU</li>" : "<li><b>Insulina ${rapid} em 2 - 3 horas:</b> QU</li>"}
       <li><b>Total bolus:</b> TU</li>
       <li><b>Calorias da refeição:</b> ≈ KK kcal</li>
     </ul>

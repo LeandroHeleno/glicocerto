@@ -21,14 +21,14 @@
     html, body { height:100%; }
     body { font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background: var(--bg); color: var(--text); margin:0; line-height:1.45; }
 
-    header { position: sticky; top: 0; z-index: 100; background: var(--brand); color:#fff; padding:10px 12px; font-size:16px; font-weight:700; display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    header { position: sticky; top: 0; z-index: 100; background: var(--brand); color:#fff; padding:10px 12px; font-size:14px; font-weight:700; display:flex; align-items:center; justify-content:space-between; gap:10px; }
     .left-brand{ display:flex; align-items:center; gap:8px; }
     .auth-box{ display:flex; align-items:center; gap:8px; flex-wrap:nowrap; }
 
     /* Ícone único de tema */
     .theme-icon-btn{
       background:rgba(255,255,255,.18); color:#fff; border:1px solid rgba(255,255,255,.25);
-      width:26px; height:26px; border-radius:999px; font-size:16px; cursor:pointer;
+      width:26px; height:26px; border-radius:999px; font-size:14px; cursor:pointer;
       display:grid; place-items:center; line-height:1;
     }
 
@@ -161,13 +161,14 @@
     }
 
     .details-clean .gc-table {
-      min-width: 600px;              /* força largura mínima */
+      min-width: 640px;              /* força largura mínima */
       border-collapse: collapse;
-      font-size: 14px;
+      font-size: 12px;
+      width:100%;
     }
 .details-clean .gc-table th, .details-clean .gc-table td{
-      border:1px solid var(--border); padding:6px 8px; text-align:left;
-      white-space:normal; word-break:break-word; overflow-wrap:anywhere;
+      border:1px solid var(--border); padding:5rem .6rem; text-align:left;
+      white-space:nowrap; word-break:break-word; overflow-wrap:anywhere;
     }
 
 
@@ -238,7 +239,7 @@
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.8.26</div>
+            <div>v1.8.28</div>
           </div>
         </div>
       </div>
@@ -558,7 +559,7 @@
   </nav>
 
   <script>
-    console.log('GlicoCerto v1.8.26 carregado', new Date().toISOString());
+    console.log('GlicoCerto v1.8.28 carregado', new Date().toISOString());
 
     // Ajuda: detecta se há sessão cacheada do Supabase no navegador
     function hasCachedSupabaseSession() {
@@ -948,18 +949,19 @@
         const choU_i       = rint(doseCho);
         const corU_i       = rint(doseCor);
         const pgU_i        = rint(dosePg);
-        const totalFiasp_i = rint(doseCho + doseCor);
+        const totalFiasp_i = choU_i + corU_i;       
         const insRapida    = (d.config?.insulina_rapida || 'Fiasp').trim();
         const refeicaoTxt  = (d.input?.descricao || mensagem || '[foto]').replace(/\s+/g,' ').trim();
 
         let linhas = [];
         linhas.push(`Para a refeição “${refeicaoTxt}” (glicemia: ${glicVal} mg/dL):`);
+        linhas.push(`• ${insRapida.toUpperCase()} (carbo + correção): ${choU_i}U + ${corU_i}U = ${totalFiasp_i}U`);
         linhas.push(`• ${choU_i}U + ${corU_i}U de ${insRapida.toUpperCase()} para carboidratos e correção`);
         if (stratUsed === 'regular_now') {
           linhas.push(`• ${pgU_i}U de Insulina Regular (R) para proteína e gordura.`);
           linhas.push(`• Total: ${totalFiasp_i}U ${insRapida.toUpperCase()} ; ${pgU_i}U Regular`);
         } else {
-          linhas.push(`• Proteína e gordura: não aplicar agora; ver detalhes.`);
+          linhas.push(`• ${pgU_i}U de Insulina ${insRapida} para proteína e gordura daqui 2-3 horas.`);
           linhas.push(`• Total imediato: ${totalFiasp_i}U ${insRapida.toUpperCase()}`);
         }
         resumo.innerHTML = `<strong>${linhas.shift()}</strong>\n${linhas.join('\n')}`;
