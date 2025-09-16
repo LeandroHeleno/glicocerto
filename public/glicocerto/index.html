@@ -559,6 +559,67 @@
 
   <script>
     console.log('GlicoCerto v1.8.26 carregado', new Date().toISOString());
+
+    // Ajuda: detecta se há sessão cacheada do Supabase no navegador
+    function hasCachedSupabaseSession() {
+      try {
+        return Object.keys(localStorage).some(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
+      } catch { return false; }
+    }
+
+    // Mostra/esconde telas (ajuste para seus IDs/classes)
+    function showLogin()  { document.getElementById('telaLogin')?.classList.remove('hidden');
+                            document.getElementById('telaChat')?.classList.add('hidden'); }
+    function showChat()   { document.getElementById('telaChat')?.classList.remove('hidden');
+                            document.getElementById('telaLogin')?.classList.add('hidden'); }
+
+    // Boot rápido: não bloquear na tela de login
+    async function fastAuthBoot() {
+      console.time('boot');
+
+      // 1) heurística: se há sessão cacheada, entre já no chat (UX rápida)
+      const hasCached = hasCachedSupabaseSession();
+      if (hasCached) {
+        showChat();
+      } else {
+        showLogin(); // mantém login visível enquanto checamos sessão
+      }
+
+      // 2) confirma a sessão em background com timeout curto
+      try {
+        const sess = await Promise.race([
+          (async () => (await SUPABASE.auth.getSession()).data?.session || null)(),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('getSession timeout')), 1500))
+        ]);
+
+        if (sess) {
+          // temos sessão válida → mostra chat (se já estava, mantém)
+          showChat();
+        } else {
+          // sem sessão → mostra login (se já estava, mantém)
+          showLogin();
+        }
+      } catch (e) {
+        console.warn('fastAuthBoot getSession falhou/timeout:', e?.message || e);
+        // em caso de falha, se já mostramos o chat pelo cache, deixamos; senão, login.
+        if (!hasCached) showLogin();
+      } finally {
+        console.timeEnd('boot');
+      }
+
+      // 3) reaja a mudanças de auth em tempo real (login/logout)
+      SUPABASE.auth.onAuthStateChange((_event, session) => {
+        if (session) showChat();
+        else showLogin();
+      });
+    }
+
+    // chame assim que o app inicializar (após SUPABASE estar pronto)
+    document.addEventListener('DOMContentLoaded', () => {
+      fastAuthBoot();
+    });
+
+
     /* ===== Tema (ícone único) ===== */
     const THEME_KEY='gc_theme_pref';
     const root=document.documentElement;
