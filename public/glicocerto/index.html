@@ -287,7 +287,7 @@
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.8.43</div>
+            <div>v1.8.44</div>
           </div>
         </div>
       </div>
@@ -607,7 +607,7 @@
   </nav>
 
   <script>
-    console.log('GlicoCerto v1.8.43 carregado', new Date().toISOString());
+    console.log('GlicoCerto v1.8.44 carregado', new Date().toISOString());
 
     // Ajuda: detecta se há sessão cacheada do Supabase no navegador
     function hasCachedSupabaseSession() {
@@ -1005,10 +1005,10 @@
         linhas.push(`Para a refeição “${refeicaoTxt}” (glicemia: ${glicVal} mg/dL):`);
         linhas.push(`• ${insRapida.toUpperCase()} (cho + correção): ${choU_i}U + ${corU_i}U = ${totalFiasp_i}U`);        
         if (stratUsed === 'regular_now') {
-          linhas.push(`• ${pgU_i}U de Insulina Regular (R) para proteína e gordura.`);
+          linhas.push(`• ${dosePg} de Insulina Regular (R) para proteína e gordura.`);
           linhas.push(`• Total: ${totalFiasp_i}U ${insRapida.toUpperCase()} ; ${pgU_i}U Regular`);
         } else {
-          linhas.push(`• ${pgU_i}U de Insulina ${insRapida} para proteína e gordura daqui 2-3 horas.`);
+          linhas.push(`• ${dosePg}U de Insulina ${insRapida} para proteína e gordura daqui 2-3 horas.`);
           linhas.push(`• Total imediato: ${totalFiasp_i}U ${insRapida.toUpperCase()}`);
         }
         resumo.innerHTML = `<strong>${linhas.shift()}</strong>\n${linhas.join('\n')}`;
