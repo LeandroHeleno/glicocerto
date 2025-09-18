@@ -287,7 +287,7 @@
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.8.45</div>
+            <div>v1.8.47</div>
           </div>
         </div>
       </div>
@@ -607,7 +607,7 @@
   </nav>
 
   <script>
-    console.log('GlicoCerto v1.8.45 carregado', new Date().toISOString());
+    console.log('GlicoCerto v1.8.47 carregado', new Date().toISOString());
 
     // Ajuda: detecta se há sessão cacheada do Supabase no navegador
     function hasCachedSupabaseSession() {
@@ -1014,23 +1014,27 @@
         }
         resumo.innerHTML = `<strong>${linhas.shift()}</strong>\n${linhas.join('\n')}`;
         */
+        const protPctLabel =
+          (typeof protPct_i !== 'undefined' && protPct_i !== null) ? `${protPct_i}%` :
+          (typeof protPct   !== 'undefined' && protPct   !== null) ? `${protPct}%`   :
+          '40%'; // default seguro se nada vier configurado
+
         let linhas = [];
         linhas.push(`Para a refeição “${refeicaoTxt}” (glicemia: ${glicVal} mg/dL):`);
         linhas.push(`• ${insRapida.toUpperCase()} (CHO + correção): ${choU_i}U + ${corU_i}U = <b>${totalFiasp_i}U</b>`);
 
         if (stratUsed === 'regular_now') {
           // Estratégia: usar Regular para proteína+gordura
-          linhas.push(`• Insulina Regular (R) para proteína e gordura (SBD: prot ${protPct}%, gordura 10%): <b>${pgU_i}U</b>`);
+          linhas.push(`• Insulina Regular (R) para proteína e gordura (SBD: prot ${protPctLabel}, gordura 10%): <b>${pgU_i}U</b>`);
           linhas.push(`• Total imediato: ${totalFiasp_i}U ${insRapida.toUpperCase()} + ${pgU_i}U Regular`);
         } else {
           // Estratégia: split com rápida 2–3h depois
-          linhas.push(`• ${insRapida.toUpperCase()} adicional para proteína e gordura em 2–3h (SBD: prot ${protPct}%, gordura 10%): <b>${pgU_i}U</b>`);
+          linhas.push(`• ${insRapida.toUpperCase()} adicional para proteína e gordura em 2–3h (SBD: prot ${protPctLabel}, gordura 10%): <b>${pgU_i}U</b>`);
           linhas.push(`• Total agora: ${totalFiasp_i}U ${insRapida.toUpperCase()}`);
         }
 
         // Corrige exibição no HTML
         resumo.innerHTML = `<strong>${linhas.shift()}</strong><br>${linhas.join('<br>')}`;
-
         // KPIs
         const kCho = document.getElementById('kpiCho');
         const kPg  = document.getElementById('kpiPg');
