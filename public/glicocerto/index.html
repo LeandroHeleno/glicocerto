@@ -1002,7 +1002,7 @@
         const insRapida    = (d.config?.insulina_rapida || 'Fiasp').trim();
         const refeicaoTxt  = (d.input?.descricao || mensagem || '[foto]').replace(/\s+/g,' ').trim();
 
-        let linhas = [];
+       /* let linhas = [];
         linhas.push(`Para a refeição “${refeicaoTxt}” (glicemia: ${glicVal} mg/dL):`);
         linhas.push(`• ${insRapida.toUpperCase()} (cho + correção): ${choU_i}U + ${corU_i}U = ${totalFiasp_i}U`);        
         if (stratUsed === 'regular_now') {
@@ -1013,6 +1013,23 @@
           linhas.push(`• Total: ${totalFiasp_i}U ${insRapida.toUpperCase()}`);
         }
         resumo.innerHTML = `<strong>${linhas.shift()}</strong>\n${linhas.join('\n')}`;
+        */
+        let linhas = [];
+        linhas.push(`Para a refeição “${refeicaoTxt}” (glicemia: ${glicVal} mg/dL):`);
+        linhas.push(`• ${insRapida.toUpperCase()} (CHO + correção): ${choU_i}U + ${corU_i}U = <b>${totalFiasp_i}U</b>`);
+
+        if (stratUsed === 'regular_now') {
+          // Estratégia: usar Regular para proteína+gordura
+          linhas.push(`• Insulina Regular (R) para proteína e gordura (SBD: prot ${protPct}%, gordura 10%): <b>${pgU_i}U</b>`);
+          linhas.push(`• Total imediato: ${totalFiasp_i}U ${insRapida.toUpperCase()} + ${pgU_i}U Regular`);
+        } else {
+          // Estratégia: split com rápida 2–3h depois
+          linhas.push(`• ${insRapida.toUpperCase()} adicional para proteína e gordura em 2–3h (SBD: prot ${protPct}%, gordura 10%): <b>${pgU_i}U</b>`);
+          linhas.push(`• Total agora: ${totalFiasp_i}U ${insRapida.toUpperCase()}`);
+        }
+
+        // Corrige exibição no HTML
+        resumo.innerHTML = `<strong>${linhas.shift()}</strong><br>${linhas.join('<br>')}`;
 
         // KPIs
         const kCho = document.getElementById('kpiCho');
