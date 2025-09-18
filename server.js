@@ -51,17 +51,6 @@ function supabaseFromReq(req) {
 function num(s){ const n = parseFloat(String(s).replace(/\./g,'').replace(',','.')); return Number.isFinite(n)?n:0; }
 
 
-// Reescreve/insere a linha dos Totais com as CONTAS numéricas
-function patchPgTotals(html, p, g, kcalP, kcalG, kcal, choEq){
-  const lp = `Proteínas: ${Math.round(p)}g ×4 = ${Math.round(kcalP)} kcal`;
-  const lg = `Gorduras: ${Math.round(g)}g ×9 = ${Math.round(kcalG)} kcal`;
-  const sum = `Proteína + Gordura: ${Math.round(kcal)} kcal → ${choEq.toFixed(1)} g CHO`;
-  const li = `<li><b>Proteínas/gorduras:</b> ${lp}; ${lg}; <b>${sum}</b></li>`;
-  if (/<li><b>Proteínas\/gorduras:[\s\S]*?<\/li>/i.test(html)){
-    return html.replace(/<li><b>Proteínas\/gorduras:[\s\S]*?<\/li>/i, li);
-  }
-  return html.replace(/(<li><b>Carboidratos:[\s\S]*?<\/li>)/i, `$1\n${li}`);
-}
 
 // Utils
 const r0 = (n) => Math.round(Number(n || 0));
@@ -84,7 +73,7 @@ function systemPrompt(cfg) {
   const isf     = Number(cfg?.isf || cfg?.glicose_insulina || 50); // mg/dL por 1U
   const target  = Number(cfg?.target || 100);                      // mg/dL
   const strat   = (cfg?.pg_strategy || "regular_now").trim();      // "regular_now" ou "split_rapid"
-  const pgPct   = Math.max(0, Math.min(100, Number(cfg?.pg_percent ?? 100))); // %
+  const pgPct = Math.max(0, Math.min(100, Number(cfg?.pct_cal_pf ?? 100))); // %
   const rapid = String(cfg?.insulina_rapida || 'Fiasp');
   return `
   Você é um assistente para contagem de carboidratos e cálculo de bolus em diabetes (pt-BR).
@@ -96,13 +85,15 @@ function systemPrompt(cfg) {
   • ISF (mg/dL/1U): ${isf}
   • Glicemia alvo: ${target} mg/dL
   • Estratégia proteína+gordura: ${strat}  
-  • pg_percent (% das kcal de proteína+gordura a considerar): ${pgPct}%
-  Regras para proteína+gordura:
-  - Calcule energia de proteína e gordura: kcal_pg = proteina_total_g*4 + gordura_total_g*9.
-  - Calcule equivalente CHO: pg_cho_equiv_g = round( (kcal_pg * (${pgPct}/100)) / 10 , 1 ).
-  - Se ${strat} == "regular_now": mostre dose com Insulina Regular = pg_cho_equiv_g ÷ ${icr}.
-  - Se ${strat} == "split_rapid": não usar Regular; informe dose equivalente a proteina e gorduras separada da dose de cho (informe para aplicar de 2–3h depois da refeição), mas mantenha o valor de pg_cho_equiv_g no JSON.
+  • pct_cal_pf (% das kcal de PROTEÍNA a considerar): ${pgPct}%
 
+  Regras para proteína+gordura (SBD solicitado):
+  - kcal proteína = proteina_total_g × 4; kcal gordura = gordura_total_g × 9.
+  - CHO eq da proteína = (kcal proteína × ${pgPct}%) ÷ 4  == proteina_total_g × (${pgPct}/100)
+  - CHO eq da gordura  = (kcal gordura × 10%) ÷ 4       == gordura_total_g × 0.225
+  - Portanto: pg_cho_equiv_g = round( proteina_total_g*(${pgPct}/100) + gordura_total_g*0.225 , 1 )
+  - Se ${strat} == "regular_now": mostre dose com Insulina Regular = pg_cho_equiv_g ÷ ${icr}.
+  - Se ${strat} == "split_rapid": não usar Regular agora; informe a dose equivalente separada para 2–3h depois (mas mantenha pg_cho_equiv_g no JSON).
  
   TAREFAS
   1) Identificar/estimar os itens da refeição (texto ou foto), com quantidades.
@@ -145,7 +136,7 @@ function systemPrompt(cfg) {
         <b>Proteínas + Gorduras (equivalente CHO):</b><br>
         Proteína: (YY g) × 4 = KCAL_P<br>
         Gordura: (ZZ g) × 9 = KCAL_G<br>
-        Aplique ${pgPct}% sobre (KCAL_P + KCAL_G) e depois ÷ 10 → <b>EQ_PG g CHO</b>
+        Aplique ${pgPct}% sobre KCAL_P e 10% sobre KCAL_G, depois some e ÷ 4 → <b>EQ_PG g CHO</b>
       </li>
     </ul>
 
@@ -264,9 +255,13 @@ function computePgFromHtml(html, percent = 1.0) {
     if (gSum>0) gordG = gordG || gSum;
   }
 
-  const kcal = protG*4 + gordG*9;
-  const choEq = (kcal * (percent||1)) / 10;  // 10 kcal = 1 g CHO-equivalente
-  return { protG, gordG, choEq };
+  const kcalP = protG*4;
+  const kcalG = gordG*9;
+  // Regra SBD solicitada:
+  // CHOeq_proteina = (kcalP * percent) / 4  == protG * percent
+  // CHOeq_gordura  = (kcalG * 0.10) / 4     == gordG * 0.225
+  const choEq = (protG * (percent || 0)) + (gordG * 0.225);
+  return { protG, gordG, choEq, kcalP, kcalG, kcal: kcalP + kcalG };
 }
 
 
@@ -500,12 +495,16 @@ app.post("/api/chat", async (req, res) => {
       if (parsed.resumo) refeicao_resumo = parsed.resumo;
 
       // === Fallback P+G (a partir do HTML/tabela) ===
-      const percent = Math.max(0, Math.min(100, Number(cfg?.pg_percent ?? 100))) / 100;
+      const percent = Math.max(0, Math.min(100, Number(cfg?.pct_cal_pf ?? 100))) / 100;
       if (!(pg_cho_equiv_g > 0)) {
-        pg_cho_equiv_g = r.choEq;
-        detalhes_html = patchPgTotals(detalhes_html, r.p, r.g, r.kcalP, r.kcalG, r.kcal, pg_cho_equiv_g);
+        const r = computePgFromHtml(detalhes_html, percent);   // retorna { protG, gordG, choEq, ... }
+        pg_cho_equiv_g = r.choEq;                              // choEq = protG*(%/100) + gordG*0.225
+        // (opcional) detalhes_html = patchPgTotals(..., r.kcalP, r.kcalG, r.kcal, pg_cho_equiv_g);
       }
       // ==============================================
+
+
+
     } else {
       detalhes_html = "<em>Análise automática indisponível.</em>";
     }
@@ -611,11 +610,12 @@ app.post("/api/chat-image", async (req, res) => {
       if (parsed.resumo) refeicao_resumo = parsed.resumo;
 
       // === Fallback P+G (a partir do HTML/tabela) ===
-      const percent = Math.max(0, Math.min(100, Number(cfg?.pg_percent ?? 100))) / 100;
+      const percent = Math.max(0, Math.min(100, Number(cfg?.pct_cal_pf ?? 100))) / 100;
       if (!(pg_cho_equiv_g > 0)) {
-        const { choEq } = computePgFromHtml(detalhes_html, percent);
-        pg_cho_equiv_g = choEq;
+        const r = computePgFromHtml(detalhes_html, percent);
+        pg_cho_equiv_g = r.choEq;
       }
+
       // ==============================================
     } else {
       detalhes_html = "<em>Análise automática indisponível.</em>";
