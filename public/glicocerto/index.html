@@ -287,7 +287,7 @@
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.8.47</div>
+            <div>v1.8.48</div>
           </div>
         </div>
       </div>
@@ -607,7 +607,7 @@
   </nav>
 
   <script>
-    console.log('GlicoCerto v1.8.47 carregado', new Date().toISOString());
+    console.log('GlicoCerto v1.8.48 carregado', new Date().toISOString());
 
     // Ajuda: detecta se há sessão cacheada do Supabase no navegador
     function hasCachedSupabaseSession() {
@@ -981,65 +981,68 @@
         }
 
         // ==== resumo (mesma lógica) ====
-        const t          = d.totais || {};
-        const cho_total  = Number(t.carbo_g || 0);
-        const pg_cho_eq  = Number(t.pg_cho_equiv_g || 0);
-        const icr        = Number(d.config?.insulina_cho || 10);
-        const isf        = Number(d.config?.glicose_insulina || 50);
-        const alvo       = Number(d.config?.target || 100);
-        const glicVal    = Number(d.input?.glicemia ?? glicemia);
-        const stratUsed  = (d.config?.pg_strategy || 'regular_now');
 
-        const doseCho      = cho_total / icr;
-        const doseCor      = Math.max(0, (glicVal - alvo) / isf);
-        const dosePg       = (stratUsed === 'regular_now') ? (pg_cho_eq / icr) : 0;
-        const rint         = (n) => Math.round(Number(n || 0));
-        const choU_i       = rint(doseCho);
-        const corU_i       = rint(doseCor);
-        const pgU_i        = rint(dosePg);
-        const pgU_ii        = rint(dosePg)/10;
-        const totalFiasp_i = choU_i + corU_i;       
-        const insRapida    = (d.config?.insulina_rapida || 'Fiasp').trim();
-        const refeicaoTxt  = (d.input?.descricao || mensagem || '[foto]').replace(/\s+/g,' ').trim();
-
-       /* let linhas = [];
-        linhas.push(`Para a refeição “${refeicaoTxt}” (glicemia: ${glicVal} mg/dL):`);
-        linhas.push(`• ${insRapida.toUpperCase()} (cho + correção): ${choU_i}U + ${corU_i}U = ${totalFiasp_i}U`);        
-        if (stratUsed === 'regular_now') {
-          linhas.push(`• Insulina Regular (R) para proteína e gordura: ${pgU_ii}U.`);
-          linhas.push(`• Total Imediato: ${totalFiasp_i}U ${insRapida.toUpperCase()} ; ${pgU_i}U Regular`);
-        } else {
-          linhas.push(`• ${insRapida.toUpperCase()} para proteína e gordura daqui 2-3 horas :${pgU_i}U.`);
-          linhas.push(`• Total: ${totalFiasp_i}U ${insRapida.toUpperCase()}`);
-        }
-        resumo.innerHTML = `<strong>${linhas.shift()}</strong>\n${linhas.join('\n')}`;
-        */
-        const protPctLabel =
-          (typeof protPct_i !== 'undefined' && protPct_i !== null) ? `${protPct_i}%` :
-          (typeof protPct   !== 'undefined' && protPct   !== null) ? `${protPct}%`   :
-          '40%'; // default seguro se nada vier configurado
-
+        // Totais calculados anteriormente (objeto com somas da refeição)
+        const t = d.totais || {};
+        // Carboidratos totais da refeição (g)
+        const cho_total = Number(t.carbo_g || 0);
+        // Equivalência de proteína + gordura já convertida para “g de CHO” (pré-cálculo)
+        const pg_cho_eq = Number(t.pg_cho_equiv_g || 0);
+        // Relação Insulina/Carboidrato (quantos g CHO por 1U) – anamnese
+        const icr = Number(d.config?.insulina_cho || 10);
+        // Fator de sensibilidade (quanto 1U reduz de glicemia, em mg/dL) – anamnese
+        const isf = Number(d.config?.glicose_insulina || 50);
+        // Glicemia alvo (mg/dL) – anamnese
+        const alvo = Number(d.config?.target || 100);
+        // Glicemia lida do input atual (ou variável global de fallback)
+        const glicVal = Number(d.input?.glicemia ?? glicemia);
+        // Estratégia escolhida para proteína+gordura – anamnese: 'regular_now' | 'split'
+        const stratUsed = (d.config?.pg_strategy || 'regular_now');
+        // ===== Cálculos de dose (mantidos) =====
+        // Dose para CHO (U) = g de CHO / ICR
+        const doseCho = cho_total / icr;
+        // Dose de correção (U) = max(0, (glicemia-atual - alvo) / ISF)
+        const doseCor = Math.max(0, (glicVal - alvo) / isf);
+        // Dose para proteína+gordura (U) – só entra se estratégia for 'regular_now'
+        const dosePg = (stratUsed === 'regular_now') ? (pg_cho_eq / icr) : 0;
+        // Arredondador para inteiros
+        const rint = (n) => Math.round(Number(n || 0));
+        // Doses arredondadas para exibição
+        const choU_i = rint(doseCho);          // U para carboidrato
+        const corU_i = rint(doseCor);          // U para correção
+        const pgU_i  = rint(dosePg);           // U para proteína+gordura (Regular, se 'regular_now')
+        // Mantido como no seu código (aparentemente usado em versões antigas do resumo)
+        const pgU_ii = rint(dosePg) / 10;
+        // Total imediato de insulina rápida (CHO + correção)
+        const totalFiasp_i = choU_i + corU_i;
+        // Nome da insulina rápida (ex.: Fiasp/Humalog) – anamnese
+        const insRapida = (d.config?.insulina_rapida || 'Fiasp').trim();
+        // Texto digitado da refeição (ou legenda da foto)
+        const refeicaoTxt = (d.input?.descricao || mensagem || '[foto]').replace(/\s+/g,' ').trim();
+        // ===== % de proteína do cadastro para exibição =====
+        // Campo da anamnese com a % de proteína (ex.: 40) => exibimos "40%"
+        const protPctCfg   = Number(d.config?.prot_pct);
+        const protPctLabel = Number.isFinite(protPctCfg) ? `${protPctCfg}%` : '40%'; // fallback seguro
+        // ===== Montagem do resumo =====
         let linhas = [];
         linhas.push(`Para a refeição “${refeicaoTxt}” (glicemia: ${glicVal} mg/dL):`);
         linhas.push(`• ${insRapida.toUpperCase()} (CHO + correção): ${choU_i}U + ${corU_i}U = <b>${totalFiasp_i}U</b>`);
-
         if (stratUsed === 'regular_now') {
-          // Estratégia: usar Regular para proteína+gordura
+          // Estratégia: usar Regular (R) agora para proteína+gordura
           linhas.push(`• Insulina Regular (R) para proteína e gordura (SBD: prot ${protPctLabel}, gordura 10%): <b>${pgU_i}U</b>`);
           linhas.push(`• Total imediato: ${totalFiasp_i}U ${insRapida.toUpperCase()} + ${pgU_i}U Regular`);
         } else {
-          // Estratégia: split com rápida 2–3h depois
+          // Estratégia: aplicar por split com rápida 2–3h depois
           linhas.push(`• ${insRapida.toUpperCase()} adicional para proteína e gordura em 2–3h (SBD: prot ${protPctLabel}, gordura 10%): <b>${pgU_i}U</b>`);
           linhas.push(`• Total agora: ${totalFiasp_i}U ${insRapida.toUpperCase()}`);
         }
-
         // Corrige exibição no HTML
         resumo.innerHTML = `<strong>${linhas.shift()}</strong><br>${linhas.join('<br>')}`;
-        // KPIs
-        const kCho = document.getElementById('kpiCho');
-        const kPg  = document.getElementById('kpiPg');
-        const kRap = document.getElementById('kpiRapida');
-        const kReg = document.getElementById('kpiRegular');
+        // ===== KPIs (cards superiores) =====
+        const kCho = document.getElementById('kpiCho');       // KPI de CHO ingerido
+        const kPg  = document.getElementById('kpiPg');        // KPI de equivalência P+G
+        const kRap = document.getElementById('kpiRapida');    // KPI total de rápida imediata
+        const kReg = document.getElementById('kpiRegular');   // KPI de Regular (quando aplicável)
 
         if (kCho){ kCho.style.display='inline-block'; kCho.textContent = `CHO: ${cho_total.toFixed(1)} g`; }
         if (kPg ){ kPg.style.display='inline-block';  kPg.textContent  = `P+G (eq): ${pg_cho_eq.toFixed(1)} g`; }
@@ -1048,7 +1051,6 @@
           if (stratUsed === 'regular_now'){ kReg.style.display='inline-block'; kReg.textContent = `Regular: ${pgU_i} U`; }
           else { kReg.style.display='none'; }
         }
-
         // ==== detalhes técnicos (limpa cercas/JSON) ====
         const raw   = d.detalhes_html || '';
         const clean = raw.replace(/```html|```/gi,'').replace(/<pre[\s\S]*?<\/pre>/gi,'').trim();
