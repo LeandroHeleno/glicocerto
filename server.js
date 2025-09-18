@@ -388,6 +388,81 @@ async function uploadMealPhoto(supabase, userId, dataUrl) {
   const pub = supabase.storage.from("refeicoes").getPublicUrl(key);
   return pub?.data?.publicUrl || null;
 }
+// ======== REGRAS SBD: proteína % do paciente + gordura 10% (kcal) ========
+function numBR(s){ const n = parseFloat(String(s||'').replace(/\./g,'').replace(',','.')); return Number.isFinite(n)?n:0; }
+
+// Tenta somar proteína(g) e gordura(g) a partir da tabela da resposta (fallback: 0)
+function parseProtGordFromTable(html){
+  let prot = 0, gord = 0;
+  // <td>...Proteína</td> e <td>...Gordura</td> por linha da tabela
+  const rows = String(html).match(/<tbody>[\s\S]*?<\/tbody>/i);
+  if(rows){
+    const tr = rows[0].match(/<tr[\s\S]*?<\/tr>/gi) || [];
+    for(const r of tr){
+      const tds = r.match(/<td[\s\S]*?<\/td>/gi) || [];
+      if(tds.length >= 6){
+        const protTd = tds[4].replace(/<[^>]+>/g,'').trim();  // 5a coluna = Proteína
+        const gordTd = tds[5].replace(/<[^>]+>/g,'').trim();  // 6a coluna = Gordura
+        prot += numBR(protTd); // valores como "7g" ou "7"
+        gord += numBR(gordTd);
+      }
+    }
+  }
+  return { prot_g: prot, gord_g: gord };
+}
+
+// Insere/atualiza a linha de “Proteínas/gorduras … → X g CHO” nos Totais
+function patchPgTotals(html, prot_g, gord_g, kcalP, kcalG, kcalSum, choEq){
+  const lp = `Proteínas: ${Math.round(prot_g)}g ×4 = ${Math.round(kcalP)} kcal`;
+  const lg = `Gorduras: ${Math.round(gord_g)}g ×9 = ${Math.round(kcalG)} kcal`;
+  const sum = `Proteína + Gordura: ${Math.round(kcalSum)} kcal → ${choEq.toFixed(1)} g CHO`;
+  const li  = `<li><b>Proteínas/gorduras:</b> ${lp}; ${lg}; <b>${sum}</b></li>`;
+  if (/<li><b>Proteínas\/gorduras:[\s\S]*?<\/li>/i.test(html)){
+    return html.replace(/<li><b>Proteínas\/gorduras:[\s\S]*?<\/li>/i, li);
+  }
+  return html.replace(/(<li><b>Carboidratos:[\s\S]*?<\/li>)/i, `$1\n${li}`);
+}
+
+// Garante a regra SBD no HTML + JSON <pre> final (usa % do cadastro!)
+function enforcePgRule(html, cfg){
+  // % proteína DA ANAMNESE (campo pct_cal_pf); se não vier, mantém 100? Não: mantém 0 para não inventar.
+  const protPct = Math.max(0, Math.min(100, Number(cfg?.pct_cal_pf ?? 0))); // ← vem do cadastro!  :contentReference[oaicite:1]{index=1}
+  const icr     = Number(cfg?.icr || cfg?.insulina_cho || 10);              // g CHO por 1U  :contentReference[oaicite:2]{index=2}
+
+  // 1) tentar ler proteína e gordura (g) da tabela
+  const { prot_g, gord_g } = parseProtGordFromTable(html);
+
+  // 2) kcal
+  const kcalP = prot_g * 4;
+  const kcalG = gord_g * 9;
+
+  // 3) aplicar % do paciente (proteína) e 10% fixo (gordura)
+  const kcalProtConsiderada = kcalP * (protPct/100);
+  const kcalGordConsiderada = kcalG * 0.10;
+
+  // 4) g CHO equivalentes (÷4)
+  const pg_cho_equiv_g = (kcalProtConsiderada + kcalGordConsiderada) / 4;
+
+  // 5) dose Regular (U)
+  const doseRegular = icr > 0 ? (pg_cho_equiv_g / icr) : 0;
+
+  // 6) Atualiza a seção "Totais"
+  let out = patchPgTotals(html, prot_g, gord_g, kcalP, kcalG, (kcalProtConsiderada+kcalGordConsiderada), pg_cho_equiv_g);
+
+  // 7) Ajusta o bloco <pre>{...}</pre> garantindo o campo pg_cho_equiv_g correto
+  out = out.replace(
+    /<pre[^>]*>\s*({[\s\S]*?})\s*<\/pre>/i,
+    (m, jstr) => {
+      try {
+        const j = JSON.parse(jstr);
+        j.pg_cho_equiv_g = Number(pg_cho_equiv_g.toFixed(1));
+        return `<pre>${JSON.stringify(j)}</pre>`;
+      } catch { return m; }
+    }
+  );
+
+  return { html: out, pg_cho_equiv_g, doseRegular, protPct };
+}
 
 /* ===================== CHAT (TEXTO) ===================== */
 app.post("/api/chat", async (req, res) => {
@@ -619,6 +694,9 @@ app.post("/api/chat-image", async (req, res) => {
   }
 });
 
+// ... depois que você tiver o `html` da IA:
+const enforced = enforcePgRule(html, req.body?.config || {});
+html = enforced.html; // resposta já corrigida
 
 /* ===================== HISTÓRICO ===================== */
 app.get("/api/refeicoes", async (req, res) => {

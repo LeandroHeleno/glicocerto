@@ -287,7 +287,7 @@
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.8.49</div>
+            <div>v1.8.50</div>
           </div>
         </div>
       </div>
@@ -607,7 +607,7 @@
   </nav>
 
   <script>
-    console.log('GlicoCerto v1.8.49 carregado', new Date().toISOString());
+    console.log('GlicoCerto v1.8.50 carregado', new Date().toISOString());
 
     // Ajuda: detecta se há sessão cacheada do Supabase no navegador
     function hasCachedSupabaseSession() {
@@ -980,62 +980,82 @@
           return;
         }
 
-        // ==== resumo (mesma lógica) ====
-        
-        const t = d.totais || {};                           // t → objeto de totais retornado pelo servidor para esta refeição
-        const cho_total = Number(t.carbo_g || 0);           // cho_total → total de carboidratos da refeição (g).
-        const pg_cho_eq = Number(t.pg_cho_equiv_g || 0);    // pg_cho_eq → equivalência de proteína + gordura convertida para gramas de carboidrato.
-        const icr = Number(d.config?.insulina_cho || 10);   // icr → relação insulina/carboidrato (g por U).
-        const isf = Number(d.config?.glicose_insulina || 50);// isf → fator de sensibilidade à insulina (quanto 1U reduz de glicemia).
-        const alvo = Number(d.config?.target || 100);       // alvo → glicemia alvo.
-        const glicVal = Number(d.input?.glicemia ?? glicemia); // glicVal → glicemia usada no cálculo (preferindo a do input atual).
-        const stratUsed = (d.config?.pg_strategy || 'regular_now');  // stratUsed → estratégia para proteína+gordura ('regular_now' | 'rapid_later').
+        // ==== RESUMO (com estratégia do paciente) ====
+        // t → totais do servidor para esta refeição
+        const t          = d.totais || {};
+        const cho_total  = Number(t.carbo_g || 0);            // cho_total → total de carboidratos da refeição (g).
+        const pg_cho_eq  = Number(t.pg_cho_equiv_g || 0);     // pg_cho_eq → equivalência de proteína + gordura convertida para gramas de carboidrato.
+        const icr        = Number(d.config?.insulina_cho || 10);                // icr → relação insulina/carboidrato (g por U).
+        const isf        = Number(d.config?.glicose_insulina || 50);            // isf → fator de sensibilidade à insulina (quanto 1U reduz de glicemia).
+        const alvo       = Number(d.config?.target || 100);                     // alvo → glicemia alvo.
+        const glicVal    = Number(d.input?.glicemia ?? glicemia);
+        const stratUsed  = (d.config?.pg_strategy || 'regular_now').trim();     // 'regular_now' | 'split_rapid' (ou similar)  :contentReference[oaicite:1]{index=1}
 
-        // ===== Doses (em U) =====
-        const doseCho = cho_total / icr;                         // CHO em U
-        const doseCor = Math.max(0, (glicVal - alvo) / isf);     // Correção em U
-        const dosePg  = (stratUsed === 'regular_now') ? (pg_cho_eq / icr) : 0; // P+G (eq) → U
-        const rint = (n) => Math.round(Number(n || 0));          // rint → arredonda para inteiro (seu padrão atual).
-        const choU_i = rint(doseCho);                            // choU_i → dose de rápida para carboidrato (U).
-        const corU_i = rint(doseCor);                            // corU_i → dose de rápida para correção (U). 
-        const pgU_i  = rint(dosePg);                             // pgU_i → dose de Regular para P+G (U). (somente 'regular_now')
-        const totalFiasp_i = choU_i + corU_i;                    // totalFiasp_i → total de rápida agora (CHO + correção) em U.
-        const insRapida = (d.config?.insulina_rapida || 'Fiasp').trim();  // insRapida → rótulo (ex.: FIASP / HUMALOG).
-        const refeicaoTxt = (d.input?.descricao || mensagem || '[foto]').replace(/\s+/g,' ').trim();  // refeicaoTxt → descrição exibida.
-        const protPctCfg   = Number(d.config?.pct_cal_pf); // protPctLabel → % de proteína do CADASTRO (pct_cal_pf), fallback 40%.
-        const protPctLabel = Number.isFinite(protPctCfg) ? `${protPctCfg}%` : '40%';
+        // Doses base
+        const doseCho    = cho_total / icr;                          // rápida (CHO)
+        const doseCor    = Math.max(0, (glicVal - alvo) / isf);      // rápida (correção)
 
-        // ===== Montagem do resumo =====
+        // P+G: a conta de unidades é a mesma (pg_cho_eq / icr).
+        // Se for REGULAR AGORA: entra no total imediato (Regular).
+        // Se for SPLIT: NÃO entra agora; vira rápida adicional em 2–3h.
+        const dosePgU    = pg_cho_eq / icr;                          // U equivalentes de P+G
+        const pgNowU     = (stratUsed === 'regular_now') ? dosePgU : 0;              // Regular agora
+        const pgLaterU   = (stratUsed === 'regular_now') ? 0 : dosePgU;              // Rápida 2–3h depois
+
+        // Arredondamentos (exibição)
+        const rint         = (n) => Math.round(Number(n || 0));
+        const choU_i       = rint(doseCho);                          // rápida por CHO
+        const corU_i       = rint(doseCor);                          // rápida por correção
+        const regU_i       = rint(pgNowU);                           // Regular imediata (se houver)
+        const laterU_i     = rint(pgLaterU);                         // Rápida para 2–3h (se ‘split’)
+        const totalFiasp_i = choU_i + corU_i;                        // rápida AGORA (cho + correção)
+
+        // Labels
+        const insRapida   = (d.config?.insulina_rapida || 'Fiasp').trim();
+        const refeicaoTxt = (d.input?.descricao || mensagem || '[foto]').replace(/\s+/g,' ').trim();
+        const protPctCfg  = Number(d.config?.pct_cal_pf);            // % proteína do cadastro
+        const protPctLbl  = Number.isFinite(protPctCfg) ? `${protPctCfg}%` : '—';   // só rótulo
+
+        // Montagem
         let linhas = [];
         linhas.push(`Para a refeição “${refeicaoTxt}” (glicemia: ${glicVal} mg/dL):`);
         linhas.push(`• ${insRapida.toUpperCase()} (CHO + correção): ${choU_i}U + ${corU_i}U = <b>${totalFiasp_i}U</b>`);
 
         if (stratUsed === 'regular_now') {
-          // Mostra P+G tanto em gramas (eq) quanto em unidades (Regular)
-          linhas.push(`• Insulina Regular (R) para proteína e gordura (SBD: prot ${protPctLabel}, gordura 10%): <b>${pgU_i}U</b> (equiv. ${pg_cho_eq.toFixed(0)} g CHO)`);
-          linhas.push(`• Total imediato: ${totalFiasp_i}U ${insRapida.toUpperCase()} + ${pgU_i}U Regular`);
+          // Usa REGULAR agora para P+G
+          linhas.push(`• Insulina Regular (R) para proteína e gordura (SBD: prot ${protPctLbl}, gordura 10%): <b>${regU_i}U</b> (equiv. ${pg_cho_eq.toFixed(1)} g CHO)`);
+          linhas.push(`• Total imediato: ${totalFiasp_i}U ${insRapida.toUpperCase()} + ${regU_i}U Regular`);
         } else {
-          // Estratégia split: orientar dose tardia com rápida; exibir g (eq) para clarear
-          linhas.push(`• ${insRapida.toUpperCase()} adicional em 2–3h (SBD: prot ${protPctLabel}, gordura 10%): <b>${pgU_i}U</b> (equiv. ${pg_cho_eq.toFixed(0)} g CHO)`);
+          // NÃO usa Regular agora; aplica RÁPIDA extra em 2–3h
+          linhas.push(`• ${insRapida.toUpperCase()} adicional para proteína e gordura em 2–3h (SBD: prot ${protPctLbl}, gordura 10%): <b>${laterU_i}U</b> (equiv. ${pg_cho_eq.toFixed(1)} g CHO)`);
           linhas.push(`• Total agora: ${totalFiasp_i}U ${insRapida.toUpperCase()}`);
         }
 
-        // Render do resumo
+        // Render
         resumo.innerHTML = `<strong>${linhas.shift()}</strong><br>${linhas.join('<br>')}`;
 
-        // ===== KPIs (chips) =====
-        const kCho = document.getElementById('kpiCho');       // CHO ingerido (g)
-        const kPg  = document.getElementById('kpiPg');        // P+G (eq) em gramas
-        const kRap = document.getElementById('kpiRapida');    // Rápida agora (U)
-        const kReg = document.getElementById('kpiRegular');   // Regular agora (U)
+        // KPIs (chips)
+        const kCho = document.getElementById('kpiCho');
+        const kPg  = document.getElementById('kpiPg');
+        const kRap = document.getElementById('kpiRapida');
+        const kReg = document.getElementById('kpiRegular');
 
         if (kCho){ kCho.style.display='inline-block'; kCho.textContent = `CHO: ${cho_total.toFixed(1)} g`; }
-        if (kPg ){ kPg.style.display='inline-block';  kPg.textContent  = `P+G (eq): ${pg_cho_eq.toFixed(0)} g`; } // <<< mostra g (eq)
-        if (kRap){ kRap.style.display='inline-block'; kRap.textContent = `Rápida: ${totalFiasp_i} U`; }
-        if (kReg){
-          if (stratUsed === 'regular_now'){ kReg.style.display='inline-block'; kReg.textContent = `Regular: ${pgU_i} U`; }
-          else { kReg.style.display='none'; }
+        if (kPg ){ kPg.style.display='inline-block';  kPg.textContent  = `P+G (eq): ${pg_cho_eq.toFixed(1)} g`; }
+        if (kRap){ 
+          // mostra somente a rápida de AGORA (cho + correção). A rápida “2–3h depois” aparece no resumo, não no KPI.
+          kRap.style.display='inline-block'; 
+          kRap.textContent = `Rápida: ${totalFiasp_i} U`; 
         }
+        if (kReg){
+          if (stratUsed === 'regular_now'){ 
+            kReg.style.display='inline-block'; 
+            kReg.textContent = `Regular: ${regU_i} U`; 
+          } else { 
+            kReg.style.display='none'; 
+          }
+        }
+
 
         // ==== detalhes técnicos (limpa cercas/JSON) ====
         const raw   = d.detalhes_html || '';
