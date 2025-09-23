@@ -1301,46 +1301,6 @@
       a.click();
       setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
     });
-    // Cria workbook e worksheet
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet(data);
-
-    // Força recálculo ao abrir
-    wb.Workbook = wb.Workbook || {};
-    wb.Workbook.CalcPr = { fullCalcOnLoad: true };
-
-    /* Converte a coluna “Foto” (índice 8 = 9ª coluna) em FÓRMULA de verdade.
-      Usamos inglês e vírgulas, que é como o Excel armazena internamente.
-      O Excel exibirá “IMAGEM(...)” para usuários PT-BR automaticamente. */
-    for (let r = 1; r < data.length; r++) {
-      const link = (data[r][8] || '').replace(/^=IMAGEM\(|\)$/g, '').replace(/";"";3;80;80$/,'').replace(/^"|"$/g,'');
-      if (!link) continue;
-      const addr = XLSX.utils.encode_cell({ r, c: 8 }); // r=linha (0-based), c=8 => coluna I (Foto)
-      ws[addr] = { f: `IMAGE("${link}","",3,80,80)` }; // fórmula real
-    }
-
-    // Largura/altura para miniaturas 80px
-    ws['!cols'] = [
-      {wch:18},{wch:12},{wch:10},{wch:50},{wch:12},{wch:18},{wch:18},{wch:18},{wch:18}
-    ];
-    ws['!rows'] = Array(data.length).fill(null);
-    for (let r = 1; r < data.length; r++) ws['!rows'][r] = { hpt: 80 };
-
-    XLSX.utils.book_append_sheet(wb, ws, 'Historico');
-
-    // Download via blob (evita bloqueio do navegador)
-    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array', compression: true });
-    const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'historico.xlsx';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
-
-
-  });
-
       
     // listeners de filtro
     function fmtDateInputLocal(d){
