@@ -1258,8 +1258,8 @@
           tds[4]?.innerText.trim() || '',
           tds[5]?.innerText.trim() || '',
           tds[6]?.innerText.trim() || '',
-          tds[7]?.innerText.trim() || '',
-          '' // Foto vai virar fórmula na próxima etapa
+          tds[7]?.innerText.trim() || ''
+          
         ];
         data.push(row);
       });
@@ -1273,7 +1273,7 @@
       wb.Workbook.CalcPr = { fullCalcOnLoad: true };
 
       // Converte a coluna "Foto" (9ª) em FÓRMULA real (formato interno do Excel é em inglês e com vírgulas)
-      for (let i = 0; i < photoLinks.length; i++) {
+     /* for (let i = 0; i < photoLinks.length; i++) {
         const link = photoLinks[i];
         if (!link) continue;
         const r = i + 1;           // +1 por causa do header (data[0])
@@ -1288,7 +1288,7 @@
       ];
       ws['!rows'] = Array(data.length).fill(null);
       for (let r = 1; r < data.length; r++) ws['!rows'][r] = { hpt: 80 };
-
+      */
       XLSX.utils.book_append_sheet(wb, ws, 'Historico');
 
       // Download via Blob (evita bloqueio de “downloads automáticos”)
