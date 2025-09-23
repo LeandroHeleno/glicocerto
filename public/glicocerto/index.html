@@ -1225,17 +1225,15 @@
 
       const tbody = document.querySelector('#tHistorico tbody');
 
-      // Cabeçalhos (remove "Ações")
+      // Cabeçalhos (exceto "Ações")
       const ths = [...document.querySelectorAll('#tHistorico thead th')].map(th => th.textContent.trim());
       const headers = ths.filter(h => h.toLowerCase() !== 'ações');
 
-      // Linhas válidas
       const trs = [...(tbody?.querySelectorAll('tr') || [])];
       const linhasValidas = trs.filter(tr => {
         const t0 = tr.cells?.[0]?.innerText?.trim() || '';
         return t0 && t0 !== 'Sem registros.' && t0 !== 'Carregando...';
       });
-
       if (linhasValidas.length === 0) {
         alert('Nada a exportar com os filtros atuais.');
         return;
@@ -1244,12 +1242,11 @@
       const data = [headers];
       const photoLinks = [];
 
-      // Monta as linhas (deixa Foto vazia, vira fórmula depois)
+      // Monta linhas (coluna Foto fica vazia por enquanto)
       linhasValidas.forEach(tr=>{
         const tds = [...tr.querySelectorAll('td')];
         const link = tds[8]?.querySelector('a')?.href || '';
         photoLinks.push(link);
-
         data.push([
           tds[0]?.innerText.trim() || '',
           tds[1]?.innerText.trim() || '',
@@ -1259,61 +1256,37 @@
           tds[5]?.innerText.trim() || '',
           tds[6]?.innerText.trim() || '',
           tds[7]?.innerText.trim() || '',
-          '' // Foto → fórmula a seguir
+          '' // foto → fórmula depois
         ]);
       });
 
-      // Cria workbook/worksheet
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.aoa_to_sheet(data);
 
-      // Recalcular ao abrir
       wb.Workbook = wb.Workbook || {};
       wb.Workbook.CalcPr = { fullCalcOnLoad: true };
 
-      // Converte 9ª coluna ("Foto") em FÓRMULA de verdade (Excel interno é inglês + vírgulas)
+      // Converte 9ª coluna em fórmula real
       for (let i = 0; i < photoLinks.length; i++) {
         const link = photoLinks[i];
         if (!link) continue;
-        const r = i + 1; // +1 cabeçalho
-        const c = 8;     // 0-based → 9ª
+        const r = i + 1; // pula cabeçalho
+        const c = 8;
         const addr = XLSX.utils.encode_cell({ r, c });
         ws[addr] = { f: `IMAGE("${link}","",3,80,80)` };
       }
 
-      // Larguras/alturas (miniatura 80px)
       ws['!cols'] = [
-        {wch:18},{wch:12},{wch:10},{wch:50},{wch:12},{wch:18},{wch:18},{wch:18},{wch:18}
+        {wch:18},{wch:12},{wch:10},{wch:50},
+        {wch:12},{wch:18},{wch:18},{wch:18},{wch:18}
       ];
       ws['!rows'] = Array(data.length).fill(null);
       for (let r = 1; r < data.length; r++) ws['!rows'][r] = { hpt: 80 };
 
       XLSX.utils.book_append_sheet(wb, ws, 'Historico');
 
-      // Gera ArrayBuffer do XLSX
+      // Download
       const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array', compression: true });
-
-      // ✅ Preferência: File System Access API (abre "Salvar como..." e evita bloqueio)
-      if (window.showSaveFilePicker) {
-        try {
-          const handle = await window.showSaveFilePicker({
-            suggestedName: 'historico.xlsx',
-            types: [{
-              description: 'Planilha Excel',
-              accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] }
-            }]
-          });
-          const writable = await handle.createWritable();
-          await writable.write(new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
-          await writable.close();
-          return;
-        } catch (e) {
-          // se o usuário cancelar, cai no fallback abaixo sem erro
-          if (e && e.name !== 'AbortError') console.warn('saveFilePicker falhou, usando fallback:', e);
-        }
-      }
-
-      // Fallback: Blob + <a download> (pode requerer liberar "Downloads automáticos" no navegador)
       const blob = new Blob([wbout], {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       });
@@ -1324,7 +1297,6 @@
       a.click();
       setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
     });
-
       
     // listeners de filtro
     function fmtDateInputLocal(d){
