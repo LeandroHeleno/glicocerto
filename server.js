@@ -587,28 +587,27 @@ app.post("/api/chat", async (req, res) => {
       detalhes_html = "<em>Análise automática indisponível.</em>";
     }
 
-    detalhes_html = patchTotalBolus(detalhes_html, rapidName, totalRapida, totalRegular);
-  
+      
     const icr    = Number(cfg?.icr || cfg?.insulina_cho || 10);
     const isf    = Number(cfg?.isf || cfg?.glicose_insulina || 50);
     const target = Number(cfg?.target || 100);
     const strat  = (cfg?.pg_strategy || "regular_now").trim();
 
-    // doses base
+    // doses base (numéricos)
     const doseCho = carbo_g / icr;                                   // rápida (CHO)
     const doseCor = Math.max(0, (Number(glicemia) - target) / isf);   // rápida (correção)
     const dosePg  = strat === "regular_now" ? pg_cho_equiv_g / icr : 0; // Regular (P+G) agora
 
-    // arredondadas para exibir/substituir no HTML
+    // valores arredondados para exibição
     const rapidName   = String(cfg?.insulina_rapida || "Fiasp");
     const rapidTotalU = r0(doseCho + doseCor);
     const regularU    = r0(dosePg);
 
-    // Corrige o HTML que veio da IA (resultado e totais)
+    // Corrige o HTML da IA (sempre força o certo)
     detalhes_html = patchRegularDose(detalhes_html, regularU);
     detalhes_html = patchTotalBolus(detalhes_html, rapidName, rapidTotalU, regularU);
 
-    // gravação
+    // gravação (se falhar com descrição_model, tentamos sem o HTML)
     const insertPayload = {
       user_id: userId,
       data_hora: new Date().toISOString(),
@@ -623,7 +622,7 @@ app.post("/api/chat", async (req, res) => {
     };
     let { error: e1 } = await supabase.from("refeicoes").insert(insertPayload);
     if (e1) {
-      const basic = { ...insertPayload };           // <<< corrigido (era sintaxe inválida)
+      const basic = { ...insertPayload };
       delete basic.descricao_model;
       const retry = await supabase.from("refeicoes").insert(basic);
       if (retry.error) throw e1;
@@ -642,6 +641,7 @@ app.post("/api/chat", async (req, res) => {
       totais: { carbo_g, pg_cho_equiv_g },
       detalhes_html,
     });
+
 
 
   } catch (e) {
