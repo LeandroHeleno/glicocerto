@@ -587,22 +587,28 @@ app.post("/api/chat", async (req, res) => {
       detalhes_html = "<em>Análise automática indisponível.</em>";
     }
 
-    const rapidName = String(cfg?.insulina_rapida || "Fiasp");
-    const totalRapida = r0(doseCho + doseCor);
-    const totalRegular = r0(dosePg);
-
-    // substitui a linha do HTML para "XU + YU = ZU"
     detalhes_html = patchTotalBolus(detalhes_html, rapidName, totalRapida, totalRegular);
   
-    const icr = Number(cfg?.icr || cfg?.insulina_cho || 10);
-    const isf = Number(cfg?.isf || cfg?.glicose_insulina || 50);
+    const icr    = Number(cfg?.icr || cfg?.insulina_cho || 10);
+    const isf    = Number(cfg?.isf || cfg?.glicose_insulina || 50);
     const target = Number(cfg?.target || 100);
-    const strat = cfg?.pg_strategy || "regular_now";
+    const strat  = (cfg?.pg_strategy || "regular_now").trim();
 
-    const doseCho = carbo_g / icr;
-    const doseCor = Math.max(0, (Number(glicemia) - target) / isf);
-    const dosePg  = strat === "regular_now" ? pg_cho_equiv_g / icr : 0;
+    // doses base
+    const doseCho = carbo_g / icr;                                   // rápida (CHO)
+    const doseCor = Math.max(0, (Number(glicemia) - target) / isf);   // rápida (correção)
+    const dosePg  = strat === "regular_now" ? pg_cho_equiv_g / icr : 0; // Regular (P+G) agora
 
+    // arredondadas para exibir/substituir no HTML
+    const rapidName   = String(cfg?.insulina_rapida || "Fiasp");
+    const rapidTotalU = r0(doseCho + doseCor);
+    const regularU    = r0(dosePg);
+
+    // Corrige o HTML que veio da IA (resultado e totais)
+    detalhes_html = patchRegularDose(detalhes_html, regularU);
+    detalhes_html = patchTotalBolus(detalhes_html, rapidName, rapidTotalU, regularU);
+
+    // gravação
     const insertPayload = {
       user_id: userId,
       data_hora: new Date().toISOString(),
@@ -611,15 +617,13 @@ app.post("/api/chat", async (req, res) => {
       glicemia: Number(glicemia),
       cho_total_g: Number(carbo_g),
       pg_cho_equiv_g: Number(pg_cho_equiv_g),
-      dose_rapida_total: r0(doseCho + doseCor),
-      dose_regular_pg: r0(dosePg),
+      dose_rapida_total: rapidTotalU,
+      dose_regular_pg: regularU,
       descricao_model: detalhes_html,
     };
-
-    // grava; se falhar por tamanho do campo "descricao_model", tenta sem ele
     let { error: e1 } = await supabase.from("refeicoes").insert(insertPayload);
     if (e1) {
-      const basic = { ...(insertPayload || {}) };
+      const basic = { ...insertPayload };           // <<< corrigido (era sintaxe inválida)
       delete basic.descricao_model;
       const retry = await supabase.from("refeicoes").insert(basic);
       if (retry.error) throw e1;
@@ -638,6 +642,8 @@ app.post("/api/chat", async (req, res) => {
       totais: { carbo_g, pg_cho_equiv_g },
       detalhes_html,
     });
+
+
   } catch (e) {
     console.error("[POST /api/chat]", e);
     const msg = String(e?.message || "");
@@ -718,14 +724,22 @@ app.post("/api/chat-image", async (req, res) => {
       console.warn('[uploadMealPhoto]', eUp?.message || eUp);
     }
 
-    const icr = Number(cfg?.icr || cfg?.insulina_cho || 10);
-    const isf = Number(cfg?.isf || cfg?.glicose_insulina || 50);
+    const icr    = Number(cfg?.icr || cfg?.insulina_cho || 10);
+    const isf    = Number(cfg?.isf || cfg?.glicose_insulina || 50);
     const target = Number(cfg?.target || 100);
-    const strat = cfg?.pg_strategy || "regular_now";
+    const strat  = (cfg?.pg_strategy || "regular_now").trim();
 
     const doseCho = carbo_g / icr;
     const doseCor = Math.max(0, (Number(glicemia) - target) / isf);
     const dosePg  = strat === "regular_now" ? pg_cho_equiv_g / icr : 0;
+
+    const rapidName   = String(cfg?.insulina_rapida || "Fiasp");
+    const rapidTotalU = r0(doseCho + doseCor);
+    const regularU    = r0(dosePg);
+
+    // aplicar patches no HTML
+    detalhes_html = patchRegularDose(detalhes_html, regularU);
+    detalhes_html = patchTotalBolus(detalhes_html, rapidName, rapidTotalU, regularU);
 
     const insertPayload = {
       user_id: userId,
@@ -735,15 +749,14 @@ app.post("/api/chat-image", async (req, res) => {
       glicemia: Number(glicemia),
       cho_total_g: Number(carbo_g),
       pg_cho_equiv_g: Number(pg_cho_equiv_g),
-      dose_rapida_total: r0(doseCho + doseCor),
-      dose_regular_pg: r0(dosePg),
+      dose_rapida_total: rapidTotalU,
+      dose_regular_pg: regularU,
       descricao_model: detalhes_html,
       foto_url,
     };
-
     let { error: e1 } = await supabase.from("refeicoes").insert(insertPayload);
     if (e1) {
-      const basic = { ...(insertPayload || {}) };
+      const basic = { ...insertPayload };          // <<< corrigido
       delete basic.descricao_model;
       const retry = await supabase.from("refeicoes").insert(basic);
       if (retry.error) throw e1;
@@ -762,6 +775,8 @@ app.post("/api/chat-image", async (req, res) => {
       totais: { carbo_g, pg_cho_equiv_g },
       detalhes_html,
     });
+
+    
   } catch (e) {
     console.error("[POST /api/chat-image]", e);
     // Fallback gentil: devolve sem análise para o front não travar
@@ -782,9 +797,6 @@ app.post("/api/chat-image", async (req, res) => {
   }
 });
 
-// ... depois que você tiver o `html` da IA:
-//const enforced = enforcePgRule(html, req.body?.config || {});
-//html = enforced.html; // resposta já corrigida
 
 /* ===================== HISTÓRICO ===================== */
 app.get("/api/refeicoes", async (req, res) => {
