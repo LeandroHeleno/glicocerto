@@ -301,7 +301,7 @@
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.9.02 Beta</div>
+            <div>v1.9.03 Beta</div>
           </div>
         </div>
       </div>
@@ -1294,158 +1294,135 @@
     //gerar relatório em pdf
     (async function(){
       const { jsPDF } = window.jspdf || {};
-      const BRAND_BLUE = '#1976D2'; // troque para o azul do app, ex: '#0EA5E9'
-      const TITLE_TEXT = 'Glicocerto';
-      const ICON_SELECTOR_GUESSES = [
-        'link[rel="icon"][href$=".png"]',
-        'link[rel="icon"]',
-        'img.logo',
-        'img[alt*="logo" i]'
-      ];
-      // tenta achar data inicial/final no DOM (primeiros <input type="date"> na área de filtros)
+      const BRAND_BLUE = '#1976D2';          // troque pela cor do app, ex: '#0EA5E9'
+      const TITLE_TEXT = 'GlicoCerto';       // título da marca no cabeçalho
+
+      // === util: HEX → [r,g,b]
+      const hexToRgb = (hex)=>{
+        const m = (hex||'').replace('#','').match(/^([0-9a-f]{6}|[0-9a-f]{3})$/i);
+        if(!m) return [25,118,210];
+        let h = m[1]; if(h.length===3) h = h.split('').map(x=>x+x).join('');
+        return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+      };
+
+      // === pega as duas datas do filtro (primeiros <input type="date"> da área de filtros)
       function getFilterDates() {
         const root = document.getElementById('filtros') || document;
         const dates = [...root.querySelectorAll('input[type="date"]')];
-        const fmt = (el) => el && el.value ? el.value : '';
-        const ini = fmt(dates[0]);
-        const fim = fmt(dates[1]);
-        return { ini, fim };
+        const val = el => (el && el.value) ? el.value : '';
+        return { ini: val(dates[0]), fim: val(dates[1]) };
       }
-      // converte HEX → rgb array
-      function hexToRgb(hex){
-        const m = (hex||'').replace('#','').match(/^([0-9a-f]{6}|[0-9a-f]{3})$/i);
-        if(!m) return [25,118,210]; // fallback p/ #1976D2
-        let h = m[1];
-        if(h.length===3) h = h.split('').map(x=>x+x).join('');
-        return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+      function formatDateBR(iso){
+        if(!iso) return '';
+        // espera "YYYY-MM-DD"
+        const [y,m,d] = iso.split('-');
+        if(!y || !m || !d) return iso;
+        return `${d.padStart(2,'0')}/${m.padStart(2,'0')}/${y}`;
       }
-      // pega ícone do app (favicon ou img.logo) e retorna dataURL PNG em alta resolução
-      async function getAppIconDataURL(sizePx = 128){
-        try{
-          // tenta achar um elemento existente
-          let src = null;
-          for(const sel of ICON_SELECTOR_GUESSES){
-            const el = document.querySelector(sel);
-            if(el){
-              src = el.href || el.src;
-              if(src) break;
-            }
+      // === tenta obter o NOME do paciente do cadastro
+      async function getNomePaciente() {
+        // 1) objetos globais comuns no app
+        if (window.APP_CONFIG?.paciente?.nome) return String(window.APP_CONFIG.paciente.nome).trim();
+        if (window.CONFIG?.paciente?.nome)     return String(window.CONFIG.paciente.nome).trim();
+        if (window.state?.config?.paciente_nome) return String(window.state.config.paciente_nome).trim();
+
+        // 2) inputs/labels da tela de cadastro/config
+        const bySel = (sel)=> document.querySelector(sel)?.value || document.querySelector(sel)?.textContent || '';
+        const guesses = [
+          '#paciente_nome',      'input[name="paciente_nome"]', 'input[name="nome"]',
+          '[data-paciente-nome]', '.paciente-nome', '#nomePaciente'
+        ];
+        for (const s of guesses) {
+          const v = bySel(s).trim();
+          if (v) return v;
+        }
+
+        // 3) backend (rota de config/cadastro, ajuste se seu backend usa outro endpoint)
+        try {
+          const res = await fetch('/api/config', { credentials: 'include' });
+          if (res.ok) {
+            const j = await res.json();
+            const cand = j?.paciente?.nome || j?.nome || j?.paciente_nome;
+            if (cand) return String(cand).trim();
           }
-          // fallback para favicon padrão
+        } catch {}
+
+        return 'Paciente'; // fallback
+      }
+
+      // === tenta achar um ícone (favicon ou .logo) para o cabeçalho
+      async function getAppIconDataURL(sizePx = 128){
+        const guesses = [
+          'link[rel="icon"][href$=".png"]','link[rel="icon"]',
+          'img.logo','img[alt*="logo" i]'
+        ];
+        try{
+          let src=null;
+          for(const sel of guesses){
+            const el = document.querySelector(sel);
+            if (el) { src = el.href || el.src; if (src) break; }
+          }
           if(!src){
             const fav = document.querySelector('link[rel="icon"]') || document.querySelector('link[rel="shortcut icon"]');
-            src = fav?.href || 'icons/icon-512.png';
+            src = fav?.href || 'icons/icon-maskable.png';
           }
           const res = await fetch(src, { mode: 'cors' });
           const blob = await res.blob();
-
-          const img = await new Promise((resolve, reject)=>{
-            const i = new Image();
-            i.crossOrigin = 'anonymous';
-            i.onload = () => resolve(i);
-            i.onerror = reject;
-            i.src = URL.createObjectURL(blob);
+          const img = await new Promise((ok,err)=>{
+            const i = new Image(); i.crossOrigin='anonymous';
+            i.onload=()=>ok(i); i.onerror=err; i.src = URL.createObjectURL(blob);
           });
-
-          // desenha maior (HD) para ficar nítido no PDF
-          const S = sizePx;
-          const canvas = document.createElement('canvas');
-          canvas.width = S; canvas.height = S;
-          const ctx = canvas.getContext('2d');
-          ctx.clearRect(0,0,S,S);
-          // manter proporção centralizada
-          const scale = Math.min(S / img.width, S / img.height);
-          const w = Math.round(img.width * scale);
-          const h = Math.round(img.height * scale);
-          const dx = Math.round((S - w)/2);
-          const dy = Math.round((S - h)/2);
-          ctx.drawImage(img, dx, dy, w, h);
-
-          const dataURL = canvas.toDataURL('image/png');
-          URL.revokeObjectURL(img.src);
-          return dataURL;
-        } catch{
-          return null;
-        }
+          const S=sizePx, c=document.createElement('canvas'); c.width=S; c.height=S;
+          const ctx=c.getContext('2d'); ctx.clearRect(0,0,S,S);
+          const k=Math.min(S/img.width,S/img.height), w=Math.round(img.width*k), h=Math.round(img.height*k);
+          ctx.drawImage(img, Math.round((S-w)/2), Math.round((S-h)/2), w, h);
+          const url=c.toDataURL('image/png'); URL.revokeObjectURL(img.src); return url;
+        }catch{return null;}
       }
-      // carrega imagem de refeição e converte para PNG nítido
-      async function urlToPngDataURL(url, sizePx = 256){
+
+      // === miniaturas nítidas a partir da URL (converte WEBP → PNG)
+      async function urlToPngDataURL(url, sizePx=360){
         if(!url) return null;
         try{
-          const res = await fetch(url, { mode: 'cors' });
-          const blob = await res.blob();
-          const img = await new Promise((resolve, reject)=>{
-            const i = new Image();
-            i.crossOrigin = 'anonymous';
-            i.onload = () => resolve(i);
-            i.onerror = reject;
-            i.src = URL.createObjectURL(blob);
-          });
-          const S = sizePx; // render maior para reduzir sem pixelar
-          const canvas = document.createElement('canvas');
-          canvas.width = S; canvas.height = S;
-          const ctx = canvas.getContext('2d');
-          ctx.fillStyle = '#fff';
-          ctx.fillRect(0,0,S,S);
-          const scale = Math.min(S / img.width, S / img.height);
-          const w = Math.round(img.width * scale);
-          const h = Math.round(img.height * scale);
-          const dx = Math.round((S - w)/2);
-          const dy = Math.round((S - h)/2);
-          ctx.imageSmoothingEnabled = true;
-          ctx.imageSmoothingQuality = 'high';
-          ctx.drawImage(img, dx, dy, w, h);
-          const dataURL = canvas.toDataURL('image/png'); // png compatível com PDF
-          URL.revokeObjectURL(img.src);
-          return dataURL;
-        } catch(e){
-          console.warn('Falha ao carregar imagem', url, e);
-          return null;
-        }
+          const res=await fetch(url,{mode:'cors'}); const blob=await res.blob();
+          const img=await new Promise((ok,err)=>{ const i=new Image(); i.crossOrigin='anonymous';
+            i.onload=()=>ok(i); i.onerror=err; i.src=URL.createObjectURL(blob); });
+          const S=sizePx, c=document.createElement('canvas'); c.width=S; c.height=S;
+          const g=c.getContext('2d'); g.fillStyle='#fff'; g.fillRect(0,0,S,S);
+          const k=Math.min(S/img.width,S/img.height), w=Math.round(img.width*k), h=Math.round(img.height*k);
+          g.imageSmoothingEnabled=true; g.imageSmoothingQuality='high';
+          g.drawImage(img, Math.round((S-w)/2), Math.round((S-h)/2), w, h);
+          const urlOut=c.toDataURL('image/png'); URL.revokeObjectURL(img.src); return urlOut;
+        }catch{return null;}
       }
 
-      // coleta dados da tabela (mantém a coluna Foto se existir)
+      // === coleta dados da tabela; mantém a coluna Foto/Imagem se existir
       function coletarHistorico(){
-        const table = document.querySelector('#tHistorico');
-        const tbody = table?.querySelector('tbody');
-        const ths = [...table.querySelectorAll('#tHistorico thead th')].map(th => (th.textContent||'').trim());
-        const trs = [...(tbody?.querySelectorAll('tr') || [])];
-
-        const linhas = trs.filter(tr=>{
-          const t0 = tr.cells?.[0]?.innerText?.trim() || '';
-          return t0 && t0 !== 'Sem registros.' && t0 !== 'Carregando...';
+        const table=document.querySelector('#tHistorico');
+        const tbody=table?.querySelector('tbody');
+        const ths=[...table.querySelectorAll('#tHistorico thead th')].map(th=>(th.textContent||'').trim());
+        const trs=[...(tbody?.querySelectorAll('tr')||[])];
+        const linhas=trs.filter(tr=>{
+          const t0=tr.cells?.[0]?.innerText?.trim()||''; return t0 && t0!=='Sem registros.' && t0!=='Carregando...';
         });
-
-        const keep = ths
-          .map((name, idx) => ({ name, idx }))
-          .filter(h => !/^ações$/i.test(h.name)); // remove ações; mantemos Foto
-
-        const headers = keep.map(h => h.name);
-        const rows = linhas.map(tr => {
-          const tds = [...tr.querySelectorAll('td')];
-          return keep.map(h => (tds[h.idx]?.innerText || '').trim());
+        const keep = ths.map((name,idx)=>({name,idx})).filter(h=>!/^ações$/i.test(h.name)); // remove "Ações"
+        const headers=keep.map(h=>h.name);
+        const rows=linhas.map(tr=>{
+          const tds=[...tr.querySelectorAll('td')];
+          return keep.map(h=>(tds[h.idx]?.innerText||'').trim());
         });
-
-        const fotoCol = headers.findIndex(h => /^foto|imagem$/i.test(h));
-        const photoLinks = linhas.map(tr => tr.querySelectorAll('td')[8]?.querySelector('a')?.href || '');
-
+        const fotoCol = headers.findIndex(h=>/^foto|imagem$/i.test(h));
+        const photoLinks = linhas.map(tr=> tr.querySelectorAll('td')[8]?.querySelector('a')?.href || '');
         return { headers, rows, fotoCol, photoLinks };
       }
 
       document.getElementById('btnBaixarPdf')?.addEventListener('click', async ()=>{
+        const [nomePaciente, logoDataUrl] = await Promise.all([ getNomePaciente(), getAppIconDataURL(160) ]);
         const { headers, rows, fotoCol, photoLinks } = coletarHistorico();
-        if (!rows.length){
-          alert('Nada a exportar com os filtros atuais.');
-          return;
-        }
+        if (!rows.length){ alert('Nada a exportar com os filtros atuais.'); return; }
 
-        // carrega ícone e miniaturas em ALTA
-        const [logoDataUrl, thumbs] = await Promise.all([
-          getAppIconDataURL(160),                       // ícone mais nítido
-          Promise.all(photoLinks.map(l => urlToPngDataURL(l, 360))) // thumbs HD
-        ]);
+        const thumbs = await Promise.all(photoLinks.map(l=>urlToPngDataURL(l, 360)));
 
-        // PDF A4 retrato
         const doc = new jsPDF({ unit:'mm', format:'a4', orientation:'portrait' });
         const [r,g,b] = hexToRgb(BRAND_BLUE);
         const margin = 15;
@@ -1453,59 +1430,57 @@
         const pageH = doc.internal.pageSize.getHeight();
 
         const { ini, fim } = getFilterDates();
-        const filtroTxt = (ini || fim) ? `Filtro: ${ini || '—'}  a  ${fim || '—'}` : 'Filtro: (sem filtro de datas)';
+        const iniBR = formatDateBR(ini);
+        const fimBR = formatDateBR(fim);
+        const filtroTxt = (iniBR || fimBR)
+          ? `Filtro: ${iniBR || '—'}  a  ${fimBR || '—'}`
+          : 'Filtro: (sem filtro de datas)';
 
-        // estilos da tabela
         const headStyles = { fillColor: [240,240,240], textColor: 20, halign:'center', valign:'middle' };
         const bodyStyles = { halign:'center', valign:'middle' };
 
         doc.autoTable({
-          startY: margin + 14, // deixa espaço p/ cabeçalho azul
+          startY: margin + 14, // espaço para o cabeçalho azul (12mm) + respiro
           head: [headers],
           body: rows,
           margin: { left: margin, right: margin, top: margin, bottom: margin },
           styles: { fontSize: 9, cellPadding: 2, overflow:'linebreak' },
           headStyles, bodyStyles,
+
           didDrawPage: (data) => {
-            // ===== CABEÇALHO AZUL =====
+            // ===== CABEÇALHO AZUL (12mm) =====
             doc.setFillColor(r,g,b);
-            doc.rect(0, 0, pageW, 12, 'F'); // barra azul topo
+            doc.rect(0, 0, pageW, 12, 'F');
+            if (logoDataUrl) doc.addImage(logoDataUrl, 'PNG', margin, 2.3, 7.4, 7.4);
+            doc.setFontSize(11); doc.setTextColor(255,255,255);
+            doc.text(`${TITLE_TEXT} — ${nomePaciente}`, margin + (logoDataUrl ? 12 : 0), 8.5);
 
-            // ícone + título
-            if (logoDataUrl) {
-              // 10x10mm
-              doc.addImage(logoDataUrl, 'PNG', margin, 4, 10, 10);
-            }
-            doc.setFontSize(12);
-            doc.setTextColor(255,255,255);
-            doc.text(TITLE_TEXT, margin + (logoDataUrl ? 13 : 0), 11); // alinhado ao ícone
-
-            // Filtro (à direita, branco)
-            doc.setFontSize(10);
-            doc.setTextColor(255,255,255);
-            doc.text(filtroTxt, pageW - margin, 11, { align:'right' });
-
-            // ===== RODAPÉ AZUL =====
+            // ===== RODAPÉ AZUL (14mm) =====
             doc.setFillColor(r,g,b);
             doc.rect(0, pageH - 14, pageW, 14, 'F');
 
             const dateStr = new Date().toLocaleString();
-            doc.setFontSize(9);
-            doc.setTextColor(255,255,255);
-            doc.text(dateStr, margin, pageH - 5); // esquerda
+            doc.setFontSize(9); doc.setTextColor(255,255,255);
 
+            // esquerda: data/hora
+            doc.text(dateStr, margin, pageH - 6);
+
+            // centro: Filtro (datas)
+            doc.text(filtroTxt, pageW/2, pageH - 6, { align:'center' });
+
+            // direita: página
             const pageStr = `Página ${doc.internal.getNumberOfPages()}`;
-            doc.text(pageStr, pageW - margin, pageH - 5, { align: 'right' }); // direita
+            doc.text(pageStr, pageW - margin, pageH - 6, { align:'right' });
           },
-          // desenha miniatura na célula de foto
+
+          // desenha miniatura na célula de Foto/Imagem, se houver
           didDrawCell: (data) => {
             if (fotoCol >= 0 && data.section === 'body' && data.column.index === fotoCol) {
               const idx = data.row.index;
               const img = thumbs[idx];
               if (img) {
                 const { x, y, width, height } = data.cell;
-                // 18x18mm ou limitado pela célula
-                const size = Math.min(22, height - 2, width - 2);
+                const size = Math.min(30, height - 2, width - 2); // ↑ aumente aqui se quiser fotos maiores (mm)
                 const cx = x + (width - size)/2;
                 const cy = y + (height - size)/2;
                 doc.addImage(img, 'PNG', cx, cy, size, size);
