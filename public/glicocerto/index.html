@@ -296,7 +296,7 @@
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.8.61 Beta</div>
+            <div>v1.8.62 Beta</div>
           </div>
         </div>
       </div>
@@ -1265,11 +1265,21 @@
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(data);
 
-    // (Opcional) força recálculo na abertura — não atrapalha com IMAGEM
+    // Força recálculo ao abrir
     wb.Workbook = wb.Workbook || {};
     wb.Workbook.CalcPr = { fullCalcOnLoad: true };
 
-    // Largura de colunas e altura de linhas (miniatura 80px)
+    /* Converte a coluna “Foto” (índice 8 = 9ª coluna) em FÓRMULA de verdade.
+      Usamos inglês e vírgulas, que é como o Excel armazena internamente.
+      O Excel exibirá “IMAGEM(...)” para usuários PT-BR automaticamente. */
+    for (let r = 1; r < data.length; r++) {
+      const link = (data[r][8] || '').replace(/^=IMAGEM\(|\)$/g, '').replace(/";"";3;80;80$/,'').replace(/^"|"$/g,'');
+      if (!link) continue;
+      const addr = XLSX.utils.encode_cell({ r, c: 8 }); // r=linha (0-based), c=8 => coluna I (Foto)
+      ws[addr] = { f: `IMAGE("${link}","",3,80,80)` }; // fórmula real
+    }
+
+    // Largura/altura para miniaturas 80px
     ws['!cols'] = [
       {wch:18},{wch:12},{wch:10},{wch:50},{wch:12},{wch:18},{wch:18},{wch:18},{wch:18}
     ];
@@ -1278,22 +1288,16 @@
 
     XLSX.utils.book_append_sheet(wb, ws, 'Historico');
 
-    // Gera ArrayBuffer do XLSX
+    // Download via blob (evita bloqueio do navegador)
     const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array', compression: true });
-
-    // Cria Blob e força download por <a download>, contando como gesto do usuário
-    const blob = new Blob([wbout], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    });
+    const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'historico.xlsx';
     document.body.appendChild(a);
     a.click();
-    setTimeout(() => {
-      URL.revokeObjectURL(a.href);
-      a.remove();
-    }, 1000);
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+
 
   });
 
