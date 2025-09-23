@@ -1219,18 +1219,17 @@
     // ===== Histórico (filtros + render + XLSX) =====
     let histCache = [];
 
-    document.getElementById('btnBaixarXlsx')?.addEventListener('click', (ev)=>{
-      
+    document.getElementById('btnBaixarXlsx')?.addEventListener('click', async (ev)=>{
       ev?.preventDefault?.();
       ev?.stopPropagation?.();
 
       const tbody = document.querySelector('#tHistorico tbody');
 
-      // Cabeçalhos (remove a coluna "Ações")
+      // Cabeçalhos (remove "Ações")
       const ths = [...document.querySelectorAll('#tHistorico thead th')].map(th => th.textContent.trim());
       const headers = ths.filter(h => h.toLowerCase() !== 'ações');
 
-      // Linhas válidas (ignora "Sem registros." e "Carregando...")
+      // Linhas válidas
       const trs = [...(tbody?.querySelectorAll('tr') || [])];
       const linhasValidas = trs.filter(tr => {
         const t0 = tr.cells?.[0]?.innerText?.trim() || '';
@@ -1243,17 +1242,15 @@
       }
 
       const data = [headers];
-      const photoLinks = []; // armazenamos os links para virar fórmula depois
+      const photoLinks = [];
 
-      // Monta as linhas (deixa a coluna Foto vazia por enquanto)
-      linhasValidas.forEach(tr => {
+      // Monta as linhas (deixa Foto vazia, vira fórmula depois)
+      linhasValidas.forEach(tr=>{
         const tds = [...tr.querySelectorAll('td')];
-
-        // 9ª coluna (Foto) possui <a href="...">
         const link = tds[8]?.querySelector('a')?.href || '';
         photoLinks.push(link);
 
-        const row = [
+        data.push([
           tds[0]?.innerText.trim() || '',
           tds[1]?.innerText.trim() || '',
           tds[2]?.innerText.trim() || '',
@@ -1262,31 +1259,29 @@
           tds[5]?.innerText.trim() || '',
           tds[6]?.innerText.trim() || '',
           tds[7]?.innerText.trim() || '',
-          '' // Foto vira fórmula na sequência
-        ];
-        data.push(row);
+          '' // Foto → fórmula a seguir
+        ]);
       });
 
       // Cria workbook/worksheet
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.aoa_to_sheet(data);
 
-      // Força recálculo das fórmulas ao abrir no Excel
+      // Recalcular ao abrir
       wb.Workbook = wb.Workbook || {};
       wb.Workbook.CalcPr = { fullCalcOnLoad: true };
 
-      // Converte a 9ª coluna ("Foto") em FÓRMULA de verdade
-      // No arquivo XLSX, a sintaxe interna é sempre em INGLÊS e com vírgulas.
+      // Converte 9ª coluna ("Foto") em FÓRMULA de verdade (Excel interno é inglês + vírgulas)
       for (let i = 0; i < photoLinks.length; i++) {
         const link = photoLinks[i];
         if (!link) continue;
-        const r = i + 1; // +1 por causa do cabeçalho (linha 0)
-        const c = 8;     // 0-based → 8 == 9ª coluna (Foto)
+        const r = i + 1; // +1 cabeçalho
+        const c = 8;     // 0-based → 9ª
         const addr = XLSX.utils.encode_cell({ r, c });
         ws[addr] = { f: `IMAGE("${link}","",3,80,80)` };
       }
 
-      // Larguras/alturas para miniaturas 80px
+      // Larguras/alturas (miniatura 80px)
       ws['!cols'] = [
         {wch:18},{wch:12},{wch:10},{wch:50},{wch:12},{wch:18},{wch:18},{wch:18},{wch:18}
       ];
@@ -1295,8 +1290,30 @@
 
       XLSX.utils.book_append_sheet(wb, ws, 'Historico');
 
-      // Download via Blob (conta como gesto do usuário e evita bloqueio)
+      // Gera ArrayBuffer do XLSX
       const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array', compression: true });
+
+      // ✅ Preferência: File System Access API (abre "Salvar como..." e evita bloqueio)
+      if (window.showSaveFilePicker) {
+        try {
+          const handle = await window.showSaveFilePicker({
+            suggestedName: 'historico.xlsx',
+            types: [{
+              description: 'Planilha Excel',
+              accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] }
+            }]
+          });
+          const writable = await handle.createWritable();
+          await writable.write(new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+          await writable.close();
+          return;
+        } catch (e) {
+          // se o usuário cancelar, cai no fallback abaixo sem erro
+          if (e && e.name !== 'AbortError') console.warn('saveFilePicker falhou, usando fallback:', e);
+        }
+      }
+
+      // Fallback: Blob + <a download> (pode requerer liberar "Downloads automáticos" no navegador)
       const blob = new Blob([wbout], {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       });
@@ -1307,7 +1324,6 @@
       a.click();
       setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
     });
-    
 
       
     // listeners de filtro
