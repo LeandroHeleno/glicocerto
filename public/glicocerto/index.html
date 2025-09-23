@@ -249,7 +249,16 @@
       50%  { width: 80%; }
       100% { width: 0%; }
     }
-
+     /* Remove recuo da lista dentro dos blocos de detalhes */
+    .details-clean ul {
+      margin-left: 0;
+      padding-left: 0;
+      list-style-position: inside; /* bullets/números ficam alinhados ao título */
+    }
+    .details-clean li {
+      margin-left: 0;
+      padding-left: 0;
+    }
     
     html:not([data-theme="dark"]) input, html:not([data-theme="dark"]) select, html:not([data-theme="dark"]) textarea{ color-scheme: light; }
     html[data-theme="dark"] input, html[data-theme="dark"] select, html[data-theme="dark"] textarea{ color-scheme: dark; }
@@ -287,7 +296,7 @@
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.8.57 Beta</div>
+            <div>v1.8.58 Beta</div>
           </div>
         </div>
       </div>
