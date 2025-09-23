@@ -296,7 +296,7 @@
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.8.58 Beta</div>
+            <div>v1.8.59 Beta</div>
           </div>
         </div>
       </div>
@@ -1239,7 +1239,9 @@
       const data = [headers];
       linhasValidas.forEach(tr=>{
         const tds = [...tr.querySelectorAll('td')];
-        const fotoLink = tds[8]?.querySelector('a')?.href || ''; // 9ª coluna (Foto)
+        //const fotoLink = tds[8]?.querySelector('a')?.href || ''; // 9ª coluna (Foto)
+        const link = tds[8]?.querySelector('a')?.href || '';
+        const fotoCell = link ? `=IMAGEM("${link}";"";3;80;80)` : '';
         // monta array sem a última coluna (Ações)
         const row = [
           tds[0]?.innerText.trim() || '',
@@ -1250,13 +1252,20 @@
           tds[5]?.innerText.trim() || '',
           tds[6]?.innerText.trim() || '',
           tds[7]?.innerText.trim() || '',
-          fotoLink
+          fotoCell
         ];
         data.push(row);
       });
 
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.aoa_to_sheet(data);
+        //  ajustar colunas/linhas p/ miniatura 80x80
+      ws['!cols'] = [
+        {wch:18},{wch:12},{wch:10},{wch:50},{wch:12},{wch:18},{wch:18},{wch:18},{wch:18}
+      ];
+      ws['!rows'] = Array(data.length).fill(null);
+      for (let r = 1; r < data.length; r++) ws['!rows'][r] = { hpt: 80 }; // 80 px de altura por linha
+
       XLSX.utils.book_append_sheet(wb, ws, 'Historico');
       XLSX.writeFile(wb, 'historico.xlsx');
     });
