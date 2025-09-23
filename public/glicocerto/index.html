@@ -296,7 +296,7 @@
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.8.60 Beta</div>
+            <div>v1.8.61 Beta</div>
           </div>
         </div>
       </div>
@@ -1277,7 +1277,24 @@
     for (let r = 1; r < data.length; r++) ws['!rows'][r] = { hpt: 80 };
 
     XLSX.utils.book_append_sheet(wb, ws, 'Historico');
-    XLSX.writeFile(wb, 'historico.xlsx');
+
+    // Gera ArrayBuffer do XLSX
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array', compression: true });
+
+    // Cria Blob e força download por <a download>, contando como gesto do usuário
+    const blob = new Blob([wbout], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'historico.xlsx';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      URL.revokeObjectURL(a.href);
+      a.remove();
+    }, 1000);
+
   });
 
       
