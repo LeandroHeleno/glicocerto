@@ -1321,33 +1321,60 @@
       }
       // === tenta obter o NOME do paciente do cadastro
       async function getNomePaciente() {
-        // 1) objetos globais comuns no app
-        if (window.APP_CONFIG?.paciente?.nome) return String(window.APP_CONFIG.paciente.nome).trim();
-        if (window.CONFIG?.paciente?.nome)     return String(window.CONFIG.paciente.nome).trim();
-        if (window.state?.config?.paciente_nome) return String(window.state.config.paciente_nome).trim();
+        // 0) Se já guardamos em cache nesta sessão, use
+        if (window.__PACIENTE_NOME_CACHE) return window.__PACIENTE_NOME_CACHE;
 
-        // 2) inputs/labels da tela de cadastro/config
-        const bySel = (sel)=> document.querySelector(sel)?.value || document.querySelector(sel)?.textContent || '';
-        const guesses = [
-          '#paciente_nome',      'input[name="paciente_nome"]', 'input[name="nome"]',
-          '[data-paciente-nome]', '.paciente-nome', '#nomePaciente'
+        // 1) Objetos globais comuns no app
+        const globCands = [
+          window.APP_CONFIG?.paciente?.nome,
+          window.APP_CONFIG?.nome,
+          window.CONFIG?.paciente?.nome,
+          window.CONFIG?.nome,
+          window.state?.config?.paciente_nome,
+          window.state?.paciente?.nome,
+        ].filter(Boolean);
+        if (globCands[0]) return (window.__PACIENTE_NOME_CACHE = String(globCands[0]).trim());
+
+        // 2) DOM: inputs/spans/atributos que possam conter o nome
+        const selList = [
+          '#paciente_nome','input[name="paciente_nome"]','input[name="nome"]',
+          '[data-paciente-nome]','.paciente-nome','#nomePaciente',
+          '.card-paciente .nome','.profile-name','.user-name','[data-user-name]'
         ];
-        for (const s of guesses) {
-          const v = bySel(s).trim();
-          if (v) return v;
+        for (const s of selList) {
+          const el = document.querySelector(s);
+          const v = (el?.value ?? el?.textContent ?? '').trim();
+          if (v) return (window.__PACIENTE_NOME_CACHE = v);
         }
 
-        // 3) backend (rota de config/cadastro, ajuste se seu backend usa outro endpoint)
+        // 3) localStorage: vasculha chaves com JSON e procura campos “paciente.nome”, “nome”
         try {
-          const res = await fetch('/api/config', { credentials: 'include' });
-          if (res.ok) {
-            const j = await res.json();
-            const cand = j?.paciente?.nome || j?.nome || j?.paciente_nome;
-            if (cand) return String(cand).trim();
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            const raw = localStorage.getItem(k);
+            if (!raw || raw.length > 20000) continue; // pula blobs grandes
+            try {
+              const j = JSON.parse(raw);
+              const cand = j?.paciente?.nome || j?.nome || j?.profile?.nome || j?.user?.nome;
+              if (cand) return (window.__PACIENTE_NOME_CACHE = String(cand).trim());
+            } catch {/* ignora não-JSON */}
           }
-        } catch {}
+        } catch {/* storage bloqueado */}
 
-        return 'Paciente'; // fallback
+        // 4) Backend: tente algumas rotas comuns (ajuste se o seu servidor expõe outra)
+        const urls = ['/api/config','/api/paciente','/api/profile'];
+        for (const u of urls) {
+          try {
+            const r = await fetch(u, { credentials: 'include' });
+            if (!r.ok) continue;
+            const j = await r.json();
+            const cand = j?.paciente?.nome || j?.nome || j?.paciente_nome || j?.profile?.nome;
+            if (cand) return (window.__PACIENTE_NOME_CACHE = String(cand).trim());
+          } catch {/* segue a próxima */}
+        }
+
+        // 5) Fallback final
+        return (window.__PACIENTE_NOME_CACHE = 'Paciente');
       }
 
       // === tenta achar um ícone (favicon ou .logo) para o cabeçalho
@@ -1444,8 +1471,9 @@
           head: [headers],
           body: rows,
           margin: { left: margin, right: margin, top: margin, bottom: margin },
-          styles: { fontSize: 9, cellPadding: 2, overflow:'linebreak' },
+          styles: { fontSize: 9, cellPadding: 1.5, overflow:'linebreak' },
           headStyles, bodyStyles,
+          alternateRowStyles: { fillColor: [230,240,255] },
 
           didDrawPage: (data) => {
             // ===== CABEÇALHO AZUL (12mm) =====
@@ -1480,7 +1508,7 @@
               const img = thumbs[idx];
               if (img) {
                 const { x, y, width, height } = data.cell;
-                const size = Math.min(30, height - 2, width - 2); // ↑ aumente aqui se quiser fotos maiores (mm)
+                const size = Math.min(35, height - 2, width - 2); // ↑ aumente aqui se quiser fotos maiores (mm)
                 const cx = x + (width - size)/2;
                 const cy = y + (height - size)/2;
                 doc.addImage(img, 'PNG', cx, cy, size, size);
