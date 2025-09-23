@@ -419,12 +419,21 @@ function parseProtGordFromTable(html){
   return { prot_g: prot, gord_g: gord, partsP, partsG };
 }
 // Remove os <li> extras ("Proteínas:", "Gorduras:", "Proteínas + Gorduras (equivalente CHO)")
+
+// Remove quaisquer <li> relacionados a Proteínas+Gorduras gerados pela IA
 function stripExtraPgLis(html){
   return String(html)
-    .replace(/<li><b>Prote[ií]nas:\b[\s\S]*?<\/li>/i, "")
-    .replace(/<li><b>Gorduras:\b[\s\S]*?<\/li>/i, "")
-    .replace(/<li><b>Prote[ií]nas \+ Gorduras \(equivalente CHO\):[\s\S]*?<\/li>/i, "");
+    // remove "Proteínas:" isolado
+    .replace(/<li>\s*<b>Prote[ií]nas:\b[\s\S]*?<\/li>\s*/gi, "")
+    // remove "Gorduras:" isolado
+    .replace(/<li>\s*<b>Gorduras:\b[\s\S]*?<\/li>\s*/gi, "")
+    // remove "Proteínas + Gorduras (equivalente CHO): ..."
+    .replace(/<li>\s*<b>Prote[ií]nas\s*\+\s*Gorduras\s*\(equivalente\s*CHO\)\s*:[\s\S]*?<\/li>\s*/gi, "")
+    // remove QUALQUER bloco "Proteínas + Gorduras:" (com ou sem extra)
+    .replace(/<li>\s*<b>Prote[ií]nas\s*\+\s*Gorduras\s*:[\s\S]*?<\/li>\s*/gi, "");
 }
+
+
 // Corrige a linha "Insulina R (proteína/gordura): ..." no bloco Insulina
 function patchRegularDose(html, regU){
   let out = String(html);
@@ -460,63 +469,75 @@ function patchTotalBolus(html, rapidName, rapidU, regU){
 
 
 // Insere/atualiza a linha de “Proteínas/gorduras … → X g CHO” nos Totais
+
 function patchPgTotals(html, prot_g, gord_g, kcalP, kcalG, kcalSumConsiderada, choEq, partsP, partsG, protPct){
   const fmt1 = (n) => Number(n).toFixed(1);
-  const protSumStr = partsP?.length ? `${partsP.map(x=>Math.round(x)).join(' + ')} = ${Math.round(prot_g)}g` : `${Math.round(prot_g)}g`;
-  const gordSumStr = partsG?.length ? `${partsG.map(x=>Math.round(x)).join(' + ')} = ${Math.round(gord_g)}g` : `${Math.round(gord_g)}g`;
 
-  const kcalProtPct = (kcalP * (protPct/100));
-  const kcalGord10  = (kcalG * 0.10);
+  // monta as somas detalhadas (3 + 40 = 43g; 0,5 + 70 = 70,5g etc.)
+  const joinParts = (arr) => arr && arr.length ? arr.map(v => String(v).replace('.', ',')).join(' + ') : '';
+  const protSum = partsP?.length ? `${joinParts(partsP)} = ${String(prot_g).replace('.', ',')}g` : `${String(prot_g).replace('.', ',')}g`;
+  const gordSum = partsG?.length ? `${joinParts(partsG)} = ${String(gord_g).replace('.', ',')}g` : `${String(gord_g).replace('.', ',')}g`;
 
-  const linhas = [
-    `<b>Proteínas + Gorduras:</b>`,
-    `Proteína: ${protSumStr} ×4 = ${Math.round(kcalP)} kcal × ${protPct}% = ${fmt1(kcalProtPct)} kcal`,
-    `Gordura: ${gordSumStr} ×9 = ${Math.round(kcalG)} kcal × 10% = ${fmt1(kcalGord10)} kcal`,
-    `Carboidratos (p+g) = ${fmt1(kcalProtPct)} + ${fmt1(kcalGord10)} = ${fmt1(kcalSumConsiderada)} kcal ÷10 = ${choEq.toFixed(1)} g CHO`
-  ];
+  const kcalPpct = (kcalP * (protPct/100));
+  const kcalG10  = (kcalG * 0.10);
 
-  const li = `<li>${linhas.join('<br>')}</li>`;
+  // 1) remove tudo que seja P+G pré-existente
+  let out = stripExtraPgLis(String(html));
 
-  // se já existe o bloco, substitui; senão, insere logo após Carboidratos
-  if (/<li><b>Proteínas \+ Gorduras:[\s\S]*?<\/li>/i.test(html)){
-    return html.replace(/<li><b>Proteínas \+ Gorduras:[\s\S]*?<\/li>/i, li);
+  // 2) monta o ÚNICO bloco
+  const bloco = [
+    `<li>`,
+    `<b>Proteínas + Gorduras:</b><br>`,
+    `Proteína: ${protSum} ×4 = ${String(Math.round(kcalP)).replace('.', ',')} kcal × ${protPct}% = ${String(fmt1(kcalPpct)).replace('.', ',')} kcal<br>`,
+    `Gordura: ${gordSum} ×9 = ${String(Math.round(kcalG)).replace('.', ',')} kcal × 10% = ${String(fmt1(kcalG10)).replace('.', ',')} kcal<br>`,
+    `Carboidratos (p+g) = ${String(fmt1(kcalPpct)).replace('.', ',')} + ${String(fmt1(kcalG10)).replace('.', ',')} = ${String(fmt1(kcalSumConsiderada)).replace('.', ',')} kcal ÷10 = <b>${String(choEq.toFixed(1)).replace('.', ',')} g CHO</b>`,
+    `</li>`
+  ].join("");
+
+  // 3) insere após o <li> Carboidratos
+  if (/<li>\s*<b>Carboidratos:\b[\s\S]*?<\/li>/i.test(out)){
+    out = out.replace(/(<li>\s*<b>Carboidratos:\b[\s\S]*?<\/li>)/i, `$1\n${bloco}`);
+  } else {
+    // fallback: adiciona no fim da <ul> de Totais
+    out = out.replace(/(<h3>[^<]*Totais[^<]*<\/h3>\s*<ul[^>]*>)/i, `$1\n${bloco}`);
   }
-  return html.replace(/(<li><b>Carboidratos:[\s\S]*?<\/li>)/i, `$1\n${li}`);
+
+  return out;
 }
 
 
 
 // Garante a regra SBD no HTML + JSON <pre> final (usa % do cadastro!)
+
 function enforcePgRule(html, cfg){
-  // % proteína DO CADASTRO
   const protPct = Math.max(0, Math.min(100, Number(cfg?.pct_cal_pf ?? 0)));
   const icr     = Number(cfg?.icr || cfg?.insulina_cho || 10);
 
-  // limpa blocos duplicados antes de remontar tudo
+  // limpa quaisquer blocos de P+G que a IA possa ter inserido
   let out = stripExtraPgLis(String(html));
 
+  // extrai proteína/gordura da tabela
   const { prot_g, gord_g, partsP, partsG } = parseProtGordFromTable(out);
 
   const kcalP = prot_g * 4;
   const kcalG = gord_g * 9;
-
   const kcalProtConsiderada = kcalP * (protPct/100);
   const kcalGordConsiderada = kcalG * 0.10;
 
   const pg_cho_equiv_g = (kcalProtConsiderada + kcalGordConsiderada) / 10;
 
-  // monta o ÚNICO bloco "Proteínas + Gorduras"
+  // insere o ÚNICO bloco de P+G já corrigido
   out = patchPgTotals(
     out,
     prot_g, gord_g,
-    kcalP, kcalG,
+    kcalP,  kcalG,
     (kcalProtConsiderada + kcalGordConsiderada),
     pg_cho_equiv_g,
     partsP, partsG,
     protPct
   );
 
-  // injeta pg_cho_equiv_g no <pre>{...}
+  // atualiza o <pre>{...}
   out = out.replace(
     /<pre[^>]*>\s*({[\s\S]*?})\s*<\/pre>/i,
     (m, jstr) => {
