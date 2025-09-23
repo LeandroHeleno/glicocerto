@@ -301,7 +301,7 @@
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.9.07 Beta</div>
+            <div>v1.9.08 Beta</div>
           </div>
         </div>
       </div>
@@ -1494,6 +1494,51 @@
           }
         });
 
+        // === gráfico de linhas no final ===
+        async function addChartToPdf(doc, startY, userId, ini, fim) {
+          const h = await getAuthHeaders();
+          const params = new URLSearchParams({ userId });
+          if (ini) params.set('start', new Date(ini+'T00:00:00').toISOString());
+          if (fim) params.set('end', new Date(fim+'T23:59:59.999').toISOString());
+
+          const r = await fetch('/api/refeicoes?' + params.toString(), { headers: { ...h } });
+          const j = await r.json();
+          if (!j.ok || !Array.isArray(j.data) || !j.data.length) return;
+
+          // prepara arrays
+          const labels = j.data.map(r => new Date(r.data_hora).toLocaleDateString());
+          const glicemia = j.data.map(r => Number(r.glicemia||0));
+          const choPg    = j.data.map(r => Number(r.cho_total_g||0) + Number(r.pg_cho_equiv_g||0));
+
+          // cria canvas offscreen
+          const canvas = document.createElement('canvas');
+          canvas.width = 600; canvas.height = 300;
+          const ctx = canvas.getContext('2d');
+
+          // desenha chart.js
+          await new Promise(ok=>{
+            new Chart(ctx, {
+              type: 'line',
+              data: {
+                labels,
+                datasets: [
+                  { label:'Glicemia (mg/dL)', data:glicemia, borderColor:'#e11d48', fill:false },
+                  { label:'CHO+P+G (g)', data:choPg, borderColor:'#1565c0', fill:false }
+                ]
+              },
+              options:{ responsive:false, plugins:{ legend:{ position:'bottom' } } }
+            });
+            setTimeout(ok, 800); // espera render
+          });
+
+          const imgData = canvas.toDataURL('image/png');
+          doc.addPage();
+          doc.setFontSize(12);
+          doc.text('Gráfico de Glicemia e CHO+P+G', 15, 20);
+          doc.addImage(imgData, 'PNG', 15, 30, 180, 90); // ajusta tamanho
+        }
+
+        await addChartToPdf(doc, doc.lastAutoTable.finalY || 20, USER_ID, ini, fim);
         doc.save('historico.pdf');
       });
     })();
