@@ -296,7 +296,7 @@
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.8.59 Beta</div>
+            <div>v1.8.60 Beta</div>
           </div>
         </div>
       </div>
@@ -492,7 +492,7 @@
               <tr>
                 <th>Data</th><th>Refeição</th><th>Glicemia</th><th>Alimento (descrição)</th>
                 <th>Total CHO (g)</th><th>Total gordura+proteína (CHO eq g)</th>
-                <th>Total Insulina A (rápida)</th><th>Total Insulina B (Regular)</th>
+                <th>Total Insulina CHO</th><th>Total Insulina Proteina + Gordura</th>
                 <th>Foto</th><th>Ações</th>
               </tr>
             </thead>
@@ -1225,7 +1225,6 @@
       const headers = ths.filter(h => h.toLowerCase() !== 'ações');
 
       const trs = [...(tbody?.querySelectorAll('tr') || [])];
-      // descarta linhas de estado
       const linhasValidas = trs.filter(tr => {
         const t0 = tr.cells?.[0]?.innerText?.trim() || '';
         return t0 && t0 !== 'Sem registros.' && t0 !== 'Carregando...';
@@ -1237,12 +1236,17 @@
       }
 
       const data = [headers];
+
       linhasValidas.forEach(tr=>{
         const tds = [...tr.querySelectorAll('td')];
-        //const fotoLink = tds[8]?.querySelector('a')?.href || ''; // 9ª coluna (Foto)
+
+        // Link da foto (9ª coluna da tabela)
         const link = tds[8]?.querySelector('a')?.href || '';
+
+        // >>> Fórmula em PT-BR (Excel em PT-BR). Mantemos IMAGEM, com ; e modo 3 (80x80).
         const fotoCell = link ? `=IMAGEM("${link}";"";3;80;80)` : '';
-        // monta array sem a última coluna (Ações)
+
+        // Monta a linha (sem a última coluna "Ações")
         const row = [
           tds[0]?.innerText.trim() || '',
           tds[1]?.innerText.trim() || '',
@@ -1252,23 +1256,29 @@
           tds[5]?.innerText.trim() || '',
           tds[6]?.innerText.trim() || '',
           tds[7]?.innerText.trim() || '',
-          fotoCell
+          fotoCell // <<<<< aqui vai a IMAGEM(...)
         ];
         data.push(row);
       });
 
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.aoa_to_sheet(data);
-        //  ajustar colunas/linhas p/ miniatura 80x80
-      ws['!cols'] = [
-        {wch:18},{wch:12},{wch:10},{wch:50},{wch:12},{wch:18},{wch:18},{wch:18},{wch:18}
-      ];
-      ws['!rows'] = Array(data.length).fill(null);
-      for (let r = 1; r < data.length; r++) ws['!rows'][r] = { hpt: 80 }; // 80 px de altura por linha
+    // Cria workbook e worksheet
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(data);
 
-      XLSX.utils.book_append_sheet(wb, ws, 'Historico');
-      XLSX.writeFile(wb, 'historico.xlsx');
-    });
+    // (Opcional) força recálculo na abertura — não atrapalha com IMAGEM
+    wb.Workbook = wb.Workbook || {};
+    wb.Workbook.CalcPr = { fullCalcOnLoad: true };
+
+    // Largura de colunas e altura de linhas (miniatura 80px)
+    ws['!cols'] = [
+      {wch:18},{wch:12},{wch:10},{wch:50},{wch:12},{wch:18},{wch:18},{wch:18},{wch:18}
+    ];
+    ws['!rows'] = Array(data.length).fill(null);
+    for (let r = 1; r < data.length; r++) ws['!rows'][r] = { hpt: 80 };
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Historico');
+    XLSX.writeFile(wb, 'historico.xlsx');
+  });
 
       
     // listeners de filtro
