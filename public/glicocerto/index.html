@@ -296,7 +296,7 @@
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.8.63 Beta</div>
+            <div>v1.8.62 Beta</div>
           </div>
         </div>
       </div>
@@ -1220,106 +1220,69 @@
     let histCache = [];
 
     document.getElementById('btnBaixarXlsx')?.addEventListener('click', ()=>{
-      const tbody = document.querySelector('#tHistorico tbody');
+    const tbody = document.querySelector('#tHistorico tbody');
 
-      // Cabeçalhos (remove a coluna "Ações")
-      const ths   = [...document.querySelectorAll('#tHistorico thead th')].map(th=>th.textContent.trim());
-      const headers = ths.filter(h => h.toLowerCase() !== 'ações');
+    // Cabeçalhos (remove a coluna "Ações")
+    const ths   = [...document.querySelectorAll('#tHistorico thead th')].map(th=>th.textContent.trim());
+    const headers = ths.filter(h => h.toLowerCase() !== 'ações');
 
-      // Linhas válidas (ignora "Sem registros." e "Carregando...")
-      const trs = [...(tbody?.querySelectorAll('tr') || [])];
-      const linhasValidas = trs.filter(tr => {
-        const t0 = tr.cells?.[0]?.innerText?.trim() || '';
-        return t0 && t0 !== 'Sem registros.' && t0 !== 'Carregando...';
-      });
-
-      if (linhasValidas.length === 0) {
-        alert('Nada a exportar com os filtros atuais.');
-        return;
-      }
-
-      const data = [headers];
-      const photoLinks = []; // guardamos os links aqui para virar FÓRMULA depois
-
-      // Monta as linhas
-      linhasValidas.forEach(tr=>{
-        const tds = [...tr.querySelectorAll('td')];
-
-        // 9ª coluna (Foto) tem um <a href="...">
-        const link = tds[8]?.querySelector('a')?.href || '';
-        photoLinks.push(link);
-
-        // Linha sem a coluna "Ações" e com a "Foto" vazia (vamos transformar em fórmula depois)
-        const row = [
-          tds[0]?.innerText.trim() || '',
-          tds[1]?.innerText.trim() || '',
-          tds[2]?.innerText.trim() || '',
-          tds[3]?.innerText.trim() || '',
-          tds[4]?.innerText.trim() || '',
-          tds[5]?.innerText.trim() || '',
-          tds[6]?.innerText.trim() || '',
-          tds[7]?.innerText.trim() || '',
-          '' // Foto vai virar fórmula na próxima etapa
-        ];
-        data.push(row);
-      });
-
-      // Cria workbook/worksheet
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.aoa_to_sheet(data);
-
-      // Força recálculo de fórmulas ao abrir no Excel
-      wb.Workbook = wb.Workbook || {};
-      wb.Workbook.CalcPr = { fullCalcOnLoad: true };
-
-      // Converte a coluna "Foto" (9ª) em FÓRMULA real (formato interno do Excel é em inglês e com vírgulas)
-      for (let i = 0; i < photoLinks.length; i++) {
-        const link = photoLinks[i];
-        if (!link) continue;
-        const r = i + 1;           // +1 por causa do header (data[0])
-        const c = 8;               // 0-based → 8 = 9ª coluna
-        const addr = XLSX.utils.encode_cell({ r, c });
-        ws[addr] = { f: `IMAGE("${link}","",3,80,80)` };
-      }
-
-      // Largura/altura p/ caber miniaturas 80x80
-      ws['!cols'] = [
-        {wch:18},{wch:12},{wch:10},{wch:50},{wch:12},{wch:18},{wch:18},{wch:18},{wch:18}
-      ];
-      ws['!rows'] = Array(data.length).fill(null);
-      for (let r = 1; r < data.length; r++) ws['!rows'][r] = { hpt: 80 };
-
-      XLSX.utils.book_append_sheet(wb, ws, 'Historico');
-
-      // Download via Blob (evita bloqueio de “downloads automáticos”)
-      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array', compression: true });
-      const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'historico.xlsx';
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    // Linhas válidas (ignora "Sem registros." e "Carregando...")
+    const trs = [...(tbody?.querySelectorAll('tr') || [])];
+    const linhasValidas = trs.filter(tr => {
+      const t0 = tr.cells?.[0]?.innerText?.trim() || '';
+      return t0 && t0 !== 'Sem registros.' && t0 !== 'Carregando...';
     });
-    // Cria workbook e worksheet
+
+    if (linhasValidas.length === 0) {
+      alert('Nada a exportar com os filtros atuais.');
+      return;
+    }
+
+    const data = [headers];
+    const photoLinks = []; // guardamos os links aqui para virar FÓRMULA depois
+
+    // Monta as linhas
+    linhasValidas.forEach(tr=>{
+      const tds = [...tr.querySelectorAll('td')];
+
+      // 9ª coluna (Foto) tem um <a href="...">
+      const link = tds[8]?.querySelector('a')?.href || '';
+      photoLinks.push(link);
+
+      // Linha sem a coluna "Ações" e com a "Foto" vazia (vamos transformar em fórmula depois)
+      const row = [
+        tds[0]?.innerText.trim() || '',
+        tds[1]?.innerText.trim() || '',
+        tds[2]?.innerText.trim() || '',
+        tds[3]?.innerText.trim() || '',
+        tds[4]?.innerText.trim() || '',
+        tds[5]?.innerText.trim() || '',
+        tds[6]?.innerText.trim() || '',
+        tds[7]?.innerText.trim() || '',
+        '' // Foto vai virar fórmula na próxima etapa
+      ];
+      data.push(row);
+    });
+
+    // Cria workbook/worksheet
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet(data);
 
-    // Força recálculo ao abrir
+    // Força recálculo de fórmulas ao abrir no Excel
     wb.Workbook = wb.Workbook || {};
     wb.Workbook.CalcPr = { fullCalcOnLoad: true };
 
-    /* Converte a coluna “Foto” (índice 8 = 9ª coluna) em FÓRMULA de verdade.
-      Usamos inglês e vírgulas, que é como o Excel armazena internamente.
-      O Excel exibirá “IMAGEM(...)” para usuários PT-BR automaticamente. */
-    for (let r = 1; r < data.length; r++) {
-      const link = (data[r][8] || '').replace(/^=IMAGEM\(|\)$/g, '').replace(/";"";3;80;80$/,'').replace(/^"|"$/g,'');
+    // Converte a coluna "Foto" (9ª) em FÓRMULA real (formato interno do Excel é em inglês e com vírgulas)
+    for (let i = 0; i < photoLinks.length; i++) {
+      const link = photoLinks[i];
       if (!link) continue;
-      const addr = XLSX.utils.encode_cell({ r, c: 8 }); // r=linha (0-based), c=8 => coluna I (Foto)
-      ws[addr] = { f: `IMAGE("${link}","",3,80,80)` }; // fórmula real
+      const r = i + 1;           // +1 por causa do header (data[0])
+      const c = 8;               // 0-based → 8 = 9ª coluna
+      const addr = XLSX.utils.encode_cell({ r, c });
+      ws[addr] = { f: `IMAGE("${link}","",3,80,80)` };
     }
 
-    // Largura/altura para miniaturas 80px
+    // Largura/altura p/ caber miniaturas 80x80
     ws['!cols'] = [
       {wch:18},{wch:12},{wch:10},{wch:50},{wch:12},{wch:18},{wch:18},{wch:18},{wch:18}
     ];
@@ -1328,7 +1291,7 @@
 
     XLSX.utils.book_append_sheet(wb, ws, 'Historico');
 
-    // Download via blob (evita bloqueio do navegador)
+    // Download via Blob (evita bloqueio de “downloads automáticos”)
     const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array', compression: true });
     const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const a = document.createElement('a');
@@ -1337,9 +1300,8 @@
     document.body.appendChild(a);
     a.click();
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
-
-
   });
+   
 
       
     // listeners de filtro
