@@ -87,14 +87,16 @@ function systemPrompt(cfg) {
   • Estratégia proteína+gordura: ${strat}  
   • pct_cal_pf (% das kcal de PROTEÍNA a considerar): ${pgPct}%
 
-  Regras para proteína+gordura (SBD solicitado):
-  - kcal proteína = proteina_total_g × 4; kcal gordura = gordura_total_g × 9.
-  - CHO eq da proteína = (kcal proteína × ${pgPct}%) ÷ 4  == proteina_total_g × (${pgPct}/100)
-  - CHO eq da gordura  = (kcal gordura × 10%) ÷ 4       == gordura_total_g × 0.225
-  - Portanto: pg_cho_equiv_g = round( proteina_total_g*(${pgPct}/100) + gordura_total_g*0.225 , 1 )
-  - Se ${strat} == "regular_now": mostre dose com Insulina Regular = pg_cho_equiv_g ÷ ${icr}.
-  - Se ${strat} == "split_rapid": não usar Regular agora; informe a dose equivalente separada para 2–3h depois (mas mantenha pg_cho_equiv_g no JSON).
- 
+Regras para proteína+gordura (SBD solicitado):
+ - kcal proteína = proteina_total_g × 4; kcal gordura = gordura_total_g × 9.
+ - Aplique % do paciente nas kcal de PROTEÍNA e 10% nas kcal de GORDURA.
+ - CHO eq = ( (kcal_proteína × %paciente) + (kcal_gordura × 10%) ) ÷ 10
+            (equivale a: proteina_total_g × (4×%/100) ÷ 10  +  gordura_total_g × (9×10%) ÷ 10
+                         = proteina_total_g × (%/100) × 0.4  +  gordura_total_g × 0.09 )
+ - Portanto: pg_cho_equiv_g = round( proteina_total_g*(${pgPct}/100)*0.4 + gordura_total_g*0.09 , 1 )
+ - Se ${strat} == "regular_now": mostre dose com Insulina Regular = pg_cho_equiv_g ÷ ${icr}.
+ - Se ${strat} == "split_rapid": não usar Regular agora; informe a dose equivalente separada para 2–3h depois (mas mantenha pg_cho_equiv_g no JSON).
+
   TAREFAS
   1) Identificar/estimar os itens da refeição (texto ou foto), com quantidades.
   2) Para cada item, estimar:
@@ -408,43 +410,47 @@ function parseProtGordFromTable(html){
 
 // Insere/atualiza a linha de “Proteínas/gorduras … → X g CHO” nos Totais
 function patchPgTotals(html, prot_g, gord_g, kcalP, kcalG, kcalSum, choEq){
-  const lp = `Proteínas: ${Math.round(prot_g)}g ×4 = ${Math.round(kcalP)} kcal`;
-  const lg = `Gorduras: ${Math.round(gord_g)}g ×9 = ${Math.round(kcalG)} kcal`;
-  const sum = `Proteína + Gordura: ${Math.round(kcalSum)} kcal → ${choEq.toFixed(1)} g CHO`;
-  const li  = `<li><b>Proteínas/gorduras:</b> ${lp}; ${lg}; <b>${sum}</b></li>`;
-  if (/<li><b>Proteínas\/gorduras:[\s\S]*?<\/li>/i.test(html)){
-    return html.replace(/<li><b>Proteínas\/gorduras:[\s\S]*?<\/li>/i, li);
+  const lp = `Proteína (${Math.round(prot_g)}g ×4 = ${Math.round(kcalP)} kcal × %cadastro)`;
+  const lg = `Gordura (${Math.round(gord_g)}g ×9 = ${Math.round(kcalG)} kcal × 10%)`;
+  const sum = `Carboidratos (p+g) = ${kcalSum.toFixed(1)} ÷10 = ${choEq.toFixed(1)} g CHO`;
+  const li  = `<li><b>Proteínas + Gorduras:</b><br>${lp}<br>${lg}<br>${sum}</li>`;
+  if (/<li><b>Proteínas \+ Gorduras:[\s\S]*?<\/li>/i.test(html)){
+    return html.replace(/<li><b>Proteínas \+ Gorduras:[\s\S]*?<\/li>/i, li);
   }
   return html.replace(/(<li><b>Carboidratos:[\s\S]*?<\/li>)/i, `$1\n${li}`);
 }
 
+
 // Garante a regra SBD no HTML + JSON <pre> final (usa % do cadastro!)
 function enforcePgRule(html, cfg){
-  // % proteína DA ANAMNESE (campo pct_cal_pf); se não vier, mantém 100? Não: mantém 0 para não inventar.
-  const protPct = Math.max(0, Math.min(100, Number(cfg?.pct_cal_pf ?? 0))); // ← vem do cadastro!  :contentReference[oaicite:1]{index=1}
-  const icr     = Number(cfg?.icr || cfg?.insulina_cho || 10);              // g CHO por 1U  :contentReference[oaicite:2]{index=2}
+  // % proteína DO CADASTRO
+  const protPct = Math.max(0, Math.min(100, Number(cfg?.pct_cal_pf ?? 0))); 
+  const icr     = Number(cfg?.icr || cfg?.insulina_cho || 10);              
 
-  // 1) tentar ler proteína e gordura (g) da tabela
   const { prot_g, gord_g } = parseProtGordFromTable(html);
 
-  // 2) kcal
   const kcalP = prot_g * 4;
   const kcalG = gord_g * 9;
 
-  // 3) aplicar % do paciente (proteína) e 10% fixo (gordura)
+  // **Aplicar % de proteína do cadastro e 10% fixo para gordura**
   const kcalProtConsiderada = kcalP * (protPct/100);
   const kcalGordConsiderada = kcalG * 0.10;
 
-  // 4) g CHO equivalentes (÷4)
-  const pg_cho_equiv_g = (kcalProtConsiderada + kcalGordConsiderada) / 4;
+  // **Converter para gCHO equivalentes**
+  const pg_cho_equiv_g = (kcalProtConsiderada + kcalGordConsiderada) / 10; // ÷10, não ÷4
 
-  // 5) dose Regular (U)
   const doseRegular = icr > 0 ? (pg_cho_equiv_g / icr) : 0;
 
-  // 6) Atualiza a seção "Totais"
-  let out = patchPgTotals(html, prot_g, gord_g, kcalP, kcalG, (kcalProtConsiderada+kcalGordConsiderada), pg_cho_equiv_g);
+  // Atualizar Totais
+  let out = patchPgTotals(
+    html,
+    prot_g, gord_g,
+    kcalP, kcalG,
+    (kcalProtConsiderada+kcalGordConsiderada),
+    pg_cho_equiv_g
+  );
 
-  // 7) Ajusta o bloco <pre>{...}</pre> garantindo o campo pg_cho_equiv_g correto
+  // Atualizar JSON <pre>
   out = out.replace(
     /<pre[^>]*>\s*({[\s\S]*?})\s*<\/pre>/i,
     (m, jstr) => {
@@ -458,6 +464,7 @@ function enforcePgRule(html, cfg){
 
   return { html: out, pg_cho_equiv_g, doseRegular, protPct };
 }
+
 
 /* ===================== CHAT (TEXTO) ===================== */
 app.post("/api/chat", async (req, res) => {

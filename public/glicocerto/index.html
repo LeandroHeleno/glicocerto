@@ -287,7 +287,7 @@
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.8.51</div>
+            <div>v1.8.52 Beta</div>
           </div>
         </div>
       </div>
@@ -607,7 +607,7 @@
   </nav>
 
   <script>
-    console.log('GlicoCerto v1.8.51 carregado', new Date().toISOString());
+    //console.log('GlicoCerto v1.8.52 carregado', new Date().toISOString());
 
     // Ajuda: detecta se há sessão cacheada do Supabase no navegador
     function hasCachedSupabaseSession() {
@@ -1022,12 +1022,10 @@
         linhas.push(`• ${insRapida.toUpperCase()} (CHO + correção): ${choU_i}U + ${corU_i}U = <b>${totalFiasp_i}U</b>`);
 
         if (stratUsed === 'regular_now') {
-          // Usa REGULAR agora para P+G
-          linhas.push(`• Insulina Regular (R) para proteína e gordura (SBD: prot ${protPctLbl}, gordura 10%): <b>${regU_i}U</b> (equiv. ${pg_cho_eq.toFixed(1)} g CHO)`);
-          linhas.push(`• Total imediato: ${totalFiasp_i}U ${insRapida.toUpperCase()} + ${regU_i}U Regular`);
+          linhas.push(`• Insulina Regular (R) para proteína e gordura: <b>${regU_i}U</b>`);
+          linhas.push(`• Total de Insulina: ${totalFiasp_i}U ${insRapida.toUpperCase()} + ${regU_i}U Regular = <b>${totalFiasp_i + regU_i}U</b>`);
         } else {
-          // NÃO usa Regular agora; aplica RÁPIDA extra em 2–3h
-          linhas.push(`• ${insRapida.toUpperCase()} adicional para proteína e gordura em 2–3h (SBD: prot ${protPctLbl}, gordura 10%): <b>${laterU_i}U</b> (equiv. ${pg_cho_eq.toFixed(1)} g CHO)`);
+          linhas.push(`• ${insRapida.toUpperCase()} adicional para proteína e gordura em 2–3h: <b>${laterU_i}U</b>`);
           linhas.push(`• Total agora: ${totalFiasp_i}U ${insRapida.toUpperCase()}`);
         }
 
