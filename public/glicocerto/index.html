@@ -301,7 +301,7 @@
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.8.63 Beta</div>
+            <div>v1.9.02 Beta</div>
           </div>
         </div>
       </div>
@@ -1334,7 +1334,7 @@
           // fallback para favicon padrão
           if(!src){
             const fav = document.querySelector('link[rel="icon"]') || document.querySelector('link[rel="shortcut icon"]');
-            src = fav?.href || '/favicon.ico';
+            src = fav?.href || 'icons/icon-512.png';
           }
           const res = await fetch(src, { mode: 'cors' });
           const blob = await res.blob();
@@ -1460,7 +1460,7 @@
         const bodyStyles = { halign:'center', valign:'middle' };
 
         doc.autoTable({
-          startY: margin + 20, // deixa espaço p/ cabeçalho azul
+          startY: margin + 14, // deixa espaço p/ cabeçalho azul
           head: [headers],
           body: rows,
           margin: { left: margin, right: margin, top: margin, bottom: margin },
@@ -1469,7 +1469,7 @@
           didDrawPage: (data) => {
             // ===== CABEÇALHO AZUL =====
             doc.setFillColor(r,g,b);
-            doc.rect(0, 0, pageW, 18, 'F'); // barra azul topo
+            doc.rect(0, 0, pageW, 12, 'F'); // barra azul topo
 
             // ícone + título
             if (logoDataUrl) {
@@ -1505,7 +1505,7 @@
               if (img) {
                 const { x, y, width, height } = data.cell;
                 // 18x18mm ou limitado pela célula
-                const size = Math.min(18, height - 2, width - 2);
+                const size = Math.min(22, height - 2, width - 2);
                 const cx = x + (width - size)/2;
                 const cy = y + (height - size)/2;
                 doc.addImage(img, 'PNG', cx, cy, size, size);
