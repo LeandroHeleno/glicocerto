@@ -1294,13 +1294,51 @@
     //gerar relatório em pdf
     (async function(){
       const { jsPDF } = window.jspdf || {};
-
-      async function urlToPngDataURL(url, size=18){
-        if(!url) return null;
+      const BRAND_BLUE = '#1976D2'; // troque para o azul do app, ex: '#0EA5E9'
+      const TITLE_TEXT = 'Glicocerto';
+      const ICON_SELECTOR_GUESSES = [
+        'link[rel="icon"][href$=".png"]',
+        'link[rel="icon"]',
+        'img.logo',
+        'img[alt*="logo" i]'
+      ];
+      // tenta achar data inicial/final no DOM (primeiros <input type="date"> na área de filtros)
+      function getFilterDates() {
+        const root = document.getElementById('filtros') || document;
+        const dates = [...root.querySelectorAll('input[type="date"]')];
+        const fmt = (el) => el && el.value ? el.value : '';
+        const ini = fmt(dates[0]);
+        const fim = fmt(dates[1]);
+        return { ini, fim };
+      }
+      // converte HEX → rgb array
+      function hexToRgb(hex){
+        const m = (hex||'').replace('#','').match(/^([0-9a-f]{6}|[0-9a-f]{3})$/i);
+        if(!m) return [25,118,210]; // fallback p/ #1976D2
+        let h = m[1];
+        if(h.length===3) h = h.split('').map(x=>x+x).join('');
+        return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+      }
+      // pega ícone do app (favicon ou img.logo) e retorna dataURL PNG em alta resolução
+      async function getAppIconDataURL(sizePx = 128){
         try{
-          const res = await fetch(url, { mode: 'cors' });
+          // tenta achar um elemento existente
+          let src = null;
+          for(const sel of ICON_SELECTOR_GUESSES){
+            const el = document.querySelector(sel);
+            if(el){
+              src = el.href || el.src;
+              if(src) break;
+            }
+          }
+          // fallback para favicon padrão
+          if(!src){
+            const fav = document.querySelector('link[rel="icon"]') || document.querySelector('link[rel="shortcut icon"]');
+            src = fav?.href || '/favicon.ico';
+          }
+          const res = await fetch(src, { mode: 'cors' });
           const blob = await res.blob();
-          // cria objeto Image a partir do blob
+
           const img = await new Promise((resolve, reject)=>{
             const i = new Image();
             i.crossOrigin = 'anonymous';
@@ -1308,22 +1346,56 @@
             i.onerror = reject;
             i.src = URL.createObjectURL(blob);
           });
-          // desenha em canvas e exporta como PNG (converte webp → png)
+
+          // desenha maior (HD) para ficar nítido no PDF
+          const S = sizePx;
           const canvas = document.createElement('canvas');
-          // mantém miniatura quadrada
-          const s = size;
-          canvas.width = s; canvas.height = s;
+          canvas.width = S; canvas.height = S;
+          const ctx = canvas.getContext('2d');
+          ctx.clearRect(0,0,S,S);
+          // manter proporção centralizada
+          const scale = Math.min(S / img.width, S / img.height);
+          const w = Math.round(img.width * scale);
+          const h = Math.round(img.height * scale);
+          const dx = Math.round((S - w)/2);
+          const dy = Math.round((S - h)/2);
+          ctx.drawImage(img, dx, dy, w, h);
+
+          const dataURL = canvas.toDataURL('image/png');
+          URL.revokeObjectURL(img.src);
+          return dataURL;
+        } catch{
+          return null;
+        }
+      }
+      // carrega imagem de refeição e converte para PNG nítido
+      async function urlToPngDataURL(url, sizePx = 256){
+        if(!url) return null;
+        try{
+          const res = await fetch(url, { mode: 'cors' });
+          const blob = await res.blob();
+          const img = await new Promise((resolve, reject)=>{
+            const i = new Image();
+            i.crossOrigin = 'anonymous';
+            i.onload = () => resolve(i);
+            i.onerror = reject;
+            i.src = URL.createObjectURL(blob);
+          });
+          const S = sizePx; // render maior para reduzir sem pixelar
+          const canvas = document.createElement('canvas');
+          canvas.width = S; canvas.height = S;
           const ctx = canvas.getContext('2d');
           ctx.fillStyle = '#fff';
-          ctx.fillRect(0,0,s,s);
-          // fit: cobre mantendo proporção
-          const ratio = Math.min(s / img.width, s / img.height);
-          const w = Math.round(img.width * ratio);
-          const h = Math.round(img.height * ratio);
-          const dx = Math.round((s - w)/2);
-          const dy = Math.round((s - h)/2);
+          ctx.fillRect(0,0,S,S);
+          const scale = Math.min(S / img.width, S / img.height);
+          const w = Math.round(img.width * scale);
+          const h = Math.round(img.height * scale);
+          const dx = Math.round((S - w)/2);
+          const dy = Math.round((S - h)/2);
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
           ctx.drawImage(img, dx, dy, w, h);
-          const dataURL = canvas.toDataURL('image/png'); // PNG compatível com PDF
+          const dataURL = canvas.toDataURL('image/png'); // png compatível com PDF
           URL.revokeObjectURL(img.src);
           return dataURL;
         } catch(e){
@@ -1332,103 +1404,119 @@
         }
       }
 
-      function coletarHistoricoDaTabela(){
+      // coleta dados da tabela (mantém a coluna Foto se existir)
+      function coletarHistorico(){
         const table = document.querySelector('#tHistorico');
         const tbody = table?.querySelector('tbody');
-        const ths = [...table.querySelectorAll('thead th')].map(th=> (th.textContent||'').trim());
+        const ths = [...table.querySelectorAll('#tHistorico thead th')].map(th => (th.textContent||'').trim());
         const trs = [...(tbody?.querySelectorAll('tr') || [])];
 
-        // Filtra linhas válidas
         const linhas = trs.filter(tr=>{
           const t0 = tr.cells?.[0]?.innerText?.trim() || '';
           return t0 && t0 !== 'Sem registros.' && t0 !== 'Carregando...';
         });
 
-        // Monta cabeçalho e identifica índices (mantém/descarta)
-        const headerMap = ths.map((h,i)=>({ name:h, idx:i }));
-        // Escolha as colunas (ajuste se quiser ocultar algo)
-        // Aqui mantemos todas, inclusive Foto (9ª) se existir
-        const keep = headerMap.filter(h => !/^ações$/i.test(h.name));
+        const keep = ths
+          .map((name, idx) => ({ name, idx }))
+          .filter(h => !/^ações$/i.test(h.name)); // remove ações; mantemos Foto
 
-        const headers = keep.map(h=>h.name);
-        const rows = linhas.map(tr=>{
+        const headers = keep.map(h => h.name);
+        const rows = linhas.map(tr => {
           const tds = [...tr.querySelectorAll('td')];
           return keep.map(h => (tds[h.idx]?.innerText || '').trim());
         });
 
-        // Detecta índice da foto (pelo nome)
-        const fotoCol = headers.findIndex(h=> /^foto|imagem$/i.test(h));
-        // Extrai links da 9ª coluna original (se existir)
+        const fotoCol = headers.findIndex(h => /^foto|imagem$/i.test(h));
         const photoLinks = linhas.map(tr => tr.querySelectorAll('td')[8]?.querySelector('a')?.href || '');
 
         return { headers, rows, fotoCol, photoLinks };
       }
 
       document.getElementById('btnBaixarPdf')?.addEventListener('click', async ()=>{
-        const { headers, rows, fotoCol, photoLinks } = coletarHistoricoDaTabela();
+        const { headers, rows, fotoCol, photoLinks } = coletarHistorico();
         if (!rows.length){
           alert('Nada a exportar com os filtros atuais.');
           return;
         }
 
-        // Pré-carrega miniaturas (PNG dataURL) — 18x18 px
-        const thumbs = await Promise.all(photoLinks.map(link => urlToPngDataURL(link, 18)));
+        // carrega ícone e miniaturas em ALTA
+        const [logoDataUrl, thumbs] = await Promise.all([
+          getAppIconDataURL(160),                       // ícone mais nítido
+          Promise.all(photoLinks.map(l => urlToPngDataURL(l, 360))) // thumbs HD
+        ]);
 
+        // PDF A4 retrato
         const doc = new jsPDF({ unit:'mm', format:'a4', orientation:'portrait' });
+        const [r,g,b] = hexToRgb(BRAND_BLUE);
         const margin = 15;
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const pageHeight = doc.internal.pageSize.getHeight();
+        const pageW = doc.internal.pageSize.getWidth();
+        const pageH = doc.internal.pageSize.getHeight();
 
-        // Cabeçalho / rodapé via hooks
-        const titulo = 'Histórico de refeições';
-        const dataStr = new Date().toLocaleString();
+        const { ini, fim } = getFilterDates();
+        const filtroTxt = (ini || fim) ? `Filtro: ${ini || '—'}  a  ${fim || '—'}` : 'Filtro: (sem filtro de datas)';
 
+        // estilos da tabela
         const headStyles = { fillColor: [240,240,240], textColor: 20, halign:'center', valign:'middle' };
         const bodyStyles = { halign:'center', valign:'middle' };
 
-        const autoTableOptions = {
-          startY: margin + 12, // deixa espaço pro cabeçalho
+        doc.autoTable({
+          startY: margin + 20, // deixa espaço p/ cabeçalho azul
           head: [headers],
           body: rows,
-          margin: { left: margin, right: margin },
+          margin: { left: margin, right: margin, top: margin, bottom: margin },
           styles: { fontSize: 9, cellPadding: 2, overflow:'linebreak' },
           headStyles, bodyStyles,
           didDrawPage: (data) => {
-            // Cabeçalho
-            doc.setFontSize(12);
-            doc.setTextColor(10);
-            doc.text(titulo, margin, margin);
-            doc.setFontSize(9);
-            doc.setTextColor(100);
-            doc.text(dataStr, pageWidth - margin, margin, { align:'right' });
+            // ===== CABEÇALHO AZUL =====
+            doc.setFillColor(r,g,b);
+            doc.rect(0, 0, pageW, 18, 'F'); // barra azul topo
 
-            // Rodapé (páginas)
-            const str = `Página ${doc.internal.getNumberOfPages()}`;
-            doc.setFontSize(8);
-            doc.setTextColor(120);
-            doc.text(str, pageWidth/2, pageHeight - 7, { align:'center' });
+            // ícone + título
+            if (logoDataUrl) {
+              // 10x10mm
+              doc.addImage(logoDataUrl, 'PNG', margin, 4, 10, 10);
+            }
+            doc.setFontSize(12);
+            doc.setTextColor(255,255,255);
+            doc.text(TITLE_TEXT, margin + (logoDataUrl ? 13 : 0), 11); // alinhado ao ícone
+
+            // Filtro (à direita, branco)
+            doc.setFontSize(10);
+            doc.setTextColor(255,255,255);
+            doc.text(filtroTxt, pageW - margin, 11, { align:'right' });
+
+            // ===== RODAPÉ AZUL =====
+            doc.setFillColor(r,g,b);
+            doc.rect(0, pageH - 14, pageW, 14, 'F');
+
+            const dateStr = new Date().toLocaleString();
+            doc.setFontSize(9);
+            doc.setTextColor(255,255,255);
+            doc.text(dateStr, margin, pageH - 5); // esquerda
+
+            const pageStr = `Página ${doc.internal.getNumberOfPages()}`;
+            doc.text(pageStr, pageW - margin, pageH - 5, { align: 'right' }); // direita
           },
-          // desenha a imagem na célula da coluna Foto, se existir
+          // desenha miniatura na célula de foto
           didDrawCell: (data) => {
             if (fotoCol >= 0 && data.section === 'body' && data.column.index === fotoCol) {
-              const idx = data.row.index; // índice da linha no body
+              const idx = data.row.index;
               const img = thumbs[idx];
-              if (img){
-                const { x, y, height } = data.cell;
-                const size = Math.min(18, height - 2); // respeita altura da linha
-                doc.addImage(img, 'PNG', x + (data.cell.width - size)/2, y + (height - size)/2, size, size);
+              if (img) {
+                const { x, y, width, height } = data.cell;
+                // 18x18mm ou limitado pela célula
+                const size = Math.min(18, height - 2, width - 2);
+                const cx = x + (width - size)/2;
+                const cy = y + (height - size)/2;
+                doc.addImage(img, 'PNG', cx, cy, size, size);
               }
             }
           }
-        };
+        });
 
-        // Gera tabela
-        doc.autoTable(autoTableOptions);
-
-        // Salva
         doc.save('historico.pdf');
       });
-    })();  
+    })();
     // listeners de filtro
     function fmtDateInputLocal(d){
       // Gera YYYY-MM-DD respeitando o fuso local (evita “amanhã” por offset)
