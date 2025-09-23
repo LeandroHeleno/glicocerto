@@ -138,7 +138,7 @@ Regras para proteína+gordura (SBD solicitado):
         <b>Proteínas + Gorduras (equivalente CHO):</b><br>
         Proteína: (YY g) × 4 = KCAL_P<br>
         Gordura: (ZZ g) × 9 = KCAL_G<br>
-        Aplique ${pgPct}% sobre KCAL_P e 10% sobre KCAL_G, depois some e ÷ 4 → <b>EQ_PG g CHO</b>
+        Aplique ${pgPct}% sobre KCAL_P e 10% sobre KCAL_G, depois some e ÷ 10 → <b>EQ_PG g CHO</b>
       </li>
     </ul>
 
@@ -260,8 +260,6 @@ function computePgFromHtml(html, percent = 1.0) {
   const kcalP = protG*4;
   const kcalG = gordG*9;
   // Regra SBD solicitada:
-  // CHOeq_proteina = (kcalP * percent) / 4  == protG * percent
-  // CHOeq_gordura  = (kcalG * 0.10) / 4     == gordG * 0.225
   const choEq = (protG * (percent || 0)) + (gordG * 0.225);
   return { protG, gordG, choEq, kcalP, kcalG, kcal: kcalP + kcalG };
 }
@@ -510,7 +508,10 @@ app.post("/api/chat", async (req, res) => {
       }
       // ==============================================
 
-
+      // === Força a regra SBD no HTML/JSON (usa % do cadastro e 10% gordura) ===
+      const enforced = enforcePgRule(detalhes_html, cfg);
+      detalhes_html   = enforced.html;
+      if (!(pg_cho_equiv_g > 0)) pg_cho_equiv_g = enforced.pg_cho_equiv_g;
 
     } else {
       detalhes_html = "<em>Análise automática indisponível.</em>";
@@ -622,7 +623,10 @@ app.post("/api/chat-image", async (req, res) => {
         const r = computePgFromHtml(detalhes_html, percent);
         pg_cho_equiv_g = r.choEq;
       }
-
+      // === Força a regra SBD no HTML/JSON (usa % do cadastro e 10% gordura) ===
+      const enforced = enforcePgRule(detalhes_html, cfg);
+      detalhes_html   = enforced.html;
+      if (!(pg_cho_equiv_g > 0)) pg_cho_equiv_g = enforced.pg_cho_equiv_g;
       // ==============================================
     } else {
       detalhes_html = "<em>Análise automática indisponível.</em>";
@@ -702,8 +706,8 @@ app.post("/api/chat-image", async (req, res) => {
 });
 
 // ... depois que você tiver o `html` da IA:
-const enforced = enforcePgRule(html, req.body?.config || {});
-html = enforced.html; // resposta já corrigida
+//const enforced = enforcePgRule(html, req.body?.config || {});
+//html = enforced.html; // resposta já corrigida
 
 /* ===================== HISTÓRICO ===================== */
 app.get("/api/refeicoes", async (req, res) => {
