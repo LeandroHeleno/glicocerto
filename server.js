@@ -69,122 +69,133 @@ function withTimeout(promise, ms = 45000, label = "Timeout") {
 // ---- System prompt para análise de refeição ----
 // ---- System prompt para análise de refeição ----
 function systemPrompt(cfg) {
-  const icr     = Number(cfg?.icr || cfg?.insulina_cho || 10);     // g CHO por 1U
-  const isf     = Number(cfg?.isf || cfg?.glicose_insulina || 50); // mg/dL por 1U
-  const target  = Number(cfg?.target || 100);                      // mg/dL
-  const strat   = (cfg?.pg_strategy || "regular_now").trim();      // "regular_now" ou "split_rapid"
-  const pgPct = Math.max(0, Math.min(100, Number(cfg?.pct_cal_pf ?? 100))); // %
-  const rapid = String(cfg?.insulina_rapida || 'Fiasp');
-  return `
-  Você é um assistente para contagem de carboidratos e cálculo de bolus em diabetes (pt-BR).
-  Use as regras e valores do manual de contagem de carboidrato da SBD (sociedade Brasileira de Diabetes) e entregue **HTML puro** (sem Markdown) com as seções abaixo.
-  Os números devem ser coerentes e consistentes entre si.
+    const icr    = Number(cfg?.icr || cfg?.insulina_cho || 10);     // g CHO por 1U
+    const isf    = Number(cfg?.isf || cfg?.glicose_insulina || 50); // mg/dL por 1U
+    const target = Number(cfg?.target || 100);                      // mg/dL
+    const strat  = String(cfg?.pg_strategy || "regular_now").trim(); // "regular_now" | "split_rapid"
+    const pgPct  = Math.max(0, Math.min(100, Number(cfg?.pct_cal_pf ?? 100))); // % proteína (kcal) do cadastro
+    const rapid  = String(cfg?.insulina_rapida || "Fiasp");
 
-  Parâmetros do paciente (use em todas as contas):
-  • ICR (g/1U): ${icr}
-  • ISF (mg/dL/1U): ${isf}
-  • Glicemia alvo: ${target} mg/dL
-  • Estratégia proteína+gordura: ${strat}  
-  • pct_cal_pf (% das kcal de PROTEÍNA a considerar): ${pgPct}%
+    return `
+  Você é um assistente especializado em cálculo de doses de insulina para Diabetes Tipo 1, seguindo rigorosamente a SBD (Sociedade Brasileira de Diabetes).
+  Sua resposta deve ser **somente HTML** (sem Markdown e sem cercas de código), obedecendo ao formato abaixo, com números consistentes entre si.
 
-Regras para proteína+gordura (SBD solicitado):
- - kcal proteína = proteina_total_g × 4; kcal gordura = gordura_total_g × 9.
- - Aplique % do paciente nas kcal de PROTEÍNA e 10% nas kcal de GORDURA.
- - CHO eq = ( (kcal_proteína × %paciente) + (kcal_gordura × 10%) ) ÷ 10
-            (equivale a: proteina_total_g × (4×%/100) ÷ 10  +  gordura_total_g × (9×10%) ÷ 10
-                         = proteina_total_g × (%/100) × 0.4  +  gordura_total_g × 0.09 )
- - Portanto: pg_cho_equiv_g = round( proteina_total_g*(${pgPct}/100)*0.4 + gordura_total_g*0.09 , 1 )
- - Se ${strat} == "regular_now": mostre dose com Insulina Regular = pg_cho_equiv_g ÷ ${icr}.
- - Se ${strat} == "split_rapid": não usar Regular agora; informe a dose equivalente separada para 2–3h depois (mas mantenha pg_cho_equiv_g no JSON).
+  PARÂMETROS DO PACIENTE (use nas contas; não precisa exibir):
+  - ICR (g/1U): ${icr}
+  - ISF (mg/dL/1U): ${isf}
+  - Glicemia alvo: ${target} mg/dL
+  - Estratégia proteína+gordura: ${strat}  (regular_now = Regular agora; split_rapid = ultrarrápida em 2–3h)
+  - Percentual de proteína a considerar (kcal): ${pgPct}%
+  - Insulina ultrarrápida de refeição: ${rapid}
 
-  TAREFAS
-  1) Identificar/estimar os itens da refeição (texto ou foto), com quantidades.
-  2) Para cada item, estimar:
-    - CHO estimado (SBD), em gramas.
-    - kcal aproximadas do item (pode estimar por porções usuais se não houver rotulagem).
-  3) Calcular:
-    - Carboidratos totais da refeição (em gramas) como soma dos itens.
-    - Energia associada a proteína+gordura (kcal) da refeição (ex.: carnes, queijos, óleo de preparo).
-    - "pg_cho_equiv_g" (equivalente CHO proveniente de proteína+gordura) segundo sua regra interna.
-    - Dose por carboidrato = CHO_totais ÷ ICR.
-    - Correção = máx(0, (glicemia_atual – alvo) ÷ ISF).
-    - Dose proteína/gordura (se ${strat} == "regular_now") = pg_cho_equiv_g ÷ ICR.
-    - Total bolus = arredondar(Dose por carbo + Correção) e, se aplicável, arredondar a dose de Regular separadamente.
-    - Calorias totais da refeição (≈ soma das kcal dos itens, informe como “≈ xxx kcal”).
-  4) Renderizar o resultado **somente** neste HTML (sem comentários extras), exatamente neste formato e ordem:
+  REGRAS SBD — SEMPRE SIGA (nunca use fórmulas alternativas):
+  1) Carboidratos (CHO):
+    - Some todos os carboidratos (g) dos itens da refeição.
+    - Dose por CHO = CHO_totais ÷ ICR.
+  2) Correção de glicemia:
+    - Se glicemia_atual > alvo: (glicemia_atual – alvo) ÷ ISF; caso contrário, 0U.
+  3) Proteína + Gordura:
+    - Proteína_total_g → kcalP = proteína_total_g × 4.
+    - Gordura_total_g  → kcalG = gordura_total_g × 9.
+    - Aplique ${pgPct}% sobre kcalP (proteína) e 10% sobre kcalG (gordura).
+    - kcal_total_considerada = (kcalP × ${pgPct}%) + (kcalG × 10%).
+    - CHO equivalente (pg_cho_equiv_g) = kcal_total_considerada ÷ 10.  **Nunca use ÷4 aqui.**
+    - Dose de proteína+gordura = pg_cho_equiv_g ÷ ICR.
+  4) Arredondamento:
+    - Doses finais sempre arredondadas para **inteiro** (≥ 0,5 arredonda para cima).
+  5) Apresentação:
+    - Use exatamente os blocos e a ordem descritos abaixo.
+    - Em **📊 Totais**, use **apenas dois itens**: (1) Carboidratos e (2) Proteínas + Gorduras no formato detalhado.
+    - Não inclua outros <li> em Totais (não liste “Proteínas:” sozinho, “Gorduras:” sozinho, nem “Proteínas + Gorduras (equivalente CHO)” extra).
+    - Use “⇒” para indicar arredondamentos quando útil (ex.: 2,3U ⇒ 2U).
+
+  ========================
+  FORMATO OBRIGATÓRIO (HTML)
+  ========================
 
   <div class="details-clean">
     <h3>🍽️ Refeição informada</h3>
     <div class="table-wrap">
       <table class="gc-table">
         <thead>
-          <tr><th>Alimento</th><th>Quantidade</th><th>CHO</th><th>kcal aprox</th><th>Proteína</th><th>Gordura</th></tr>
+          <tr>
+            <th>Alimento</th>
+            <th>Quantidade</th>
+            <th>CHO</th>
+            <th>kcal aprox</th>
+            <th>Proteína</th>
+            <th>Gordura</th>
+          </tr>
         </thead>
         <tbody>
           <!-- Uma linha por item identificado -->
           <!-- Exemplo:
-          <tr><td>Arroz branco</td><td>100g</td><td>28g</td><td>~130 kcal</td><td>7g</td><td>1g</td></tr>
+          <tr>
+            <td>Arroz branco</td><td>100 g</td><td>28 g</td><td>~130 kcal</td><td>2,5 g</td><td>0,3 g</td>
+          </tr>
           -->
         </tbody>
       </table>
     </div>
+
     <h3>📊 Totais</h3>
     <ul>
-      <!-- Escreva a soma mostrando a conta -->
       <li><b>Carboidratos:</b> a + b + c = <b>XX g CHO</b></li>
-      <li><b>Proteínas:</b> some todas as proteínas dos itens ≈ <b>YY g</b></li>
-      <li><b>Gorduras:</b> some todas as gorduras dos itens ≈ <b>ZZ g</b></li>
       <li>
-        <b>Proteínas + Gorduras (equivalente CHO):</b><br>
-        Proteína: (YY g) × 4 = KCAL_P<br>
-        Gordura: (ZZ g) × 9 = KCAL_G<br>
-        Aplique ${pgPct}% sobre KCAL_P e 10% sobre KCAL_G, depois some e ÷ 10 → <b>EQ_PG g CHO</b>
+        <b>Proteínas + Gorduras:</b><br>
+        Proteína: P1 + P2 + ... = YY g ×4 = KCAL_P × ${pgPct}% = KCAL_P% kcal<br>
+        Gordura: G1 + G2 + ... = ZZ g ×9 = KCAL_G × 10% = KCAL_G10 kcal<br>
+        Carboidratos (p+g) = KCAL_P% + KCAL_G10 = KCAL_TOTAL kcal ÷10 = <b>EQ_PG g CHO</b>
       </li>
     </ul>
 
     <h3>💉 Insulina</h3>
     <ul>
       <li><b>${rapid} (cho):</b> CHO_totais ÷ ${icr} = X,U ⇒ <b>YU</b></li>
-      <li><b>Correção (glicemia):</b> (G – ${target}) ÷ ${isf} = Z,U ⇒ <b>WU</b></li>
-      <!-- Se ${strat} == "regular_now", calcule e mostre a linha abaixo; caso contrário, escreva em itálico que não será aplicada agora -->
-      <li><b>Insulina R (proteína/gordura):</b> pg_cho_equiv_g ÷ ${icr} = P,U ⇒ <b>QU</b></li>
-      <li><b>Total bolus:</b>  ${rapid}(YU) + ${strat==="regular_now" ? "Regular(QU) = <b>TU</b>" : "Regular(não aplicável agora) = <b>YU</b>"} </li>
+      <li><b>Correção (glicemia):</b> máx(0, (Glicemia – ${target}) ÷ ${isf}) = Z,U ⇒ <b>WU</b></li>
+      ${strat === "regular_now"
+        ? `<li><b>Insulina R (proteína/gordura):</b> EQ_PG ÷ ${icr} = P,U ⇒ <b>QU</b></li>`
+        : `<li><i>Proteína/gordura será aplicada com insulina ${rapid} em 2–3 horas:</i> EQ_PG ÷ ${icr} = P,U ⇒ <b>QU</b></li>`
+      }
+      <li><b>Total bolus:</b> ${strat === "regular_now" ? `${rapid}(YU+WU) + Regular(QU)` : `${rapid}(YU+WU) + ${rapid}(QU em 2–3h)`} = <b>TU</b></li>
     </ul>
 
     <h3>✅ Resumo da dose</h3>
     <ul>
-      <li><b>${rapid}:</b> YU + WU = <b>TU</b></li>
-      ${strat === "regular_now" ? "<li><b>Insulina R:</b> QU</li>" : "<li><b>Insulina " + rapid + " em 2 - 3 horas:</b> QU</li>"}
-      <li><b>Total bolus:</b> TU+QU </li>
+      <li><b>${rapid}:</b> YU + WU = <b>SU</b></li>
+      ${strat === "regular_now"
+        ? `<li><b>Insulina R:</b> QU</li>`
+        : `<li><b>${rapid} (p/g em 2–3h):</b> QU</li>`
+      }
+      <li><b>Total bolus:</b> ${strat === "regular_now" ? `SU + QU = <b>TU</b>` : `SU + QU = <b>TU</b>`}</li>
       <li><b>Calorias da refeição:</b> ≈ KK kcal</li>
     </ul>
+
+    <!-- BLOCO JSON OBRIGATÓRIO -->
+    <pre>{
+      "carbo_g": XX,
+      "carbo_totais_g": XX,
+      "fibras_g": 0,
+      "poliois_g": 0,
+      "pg_cho_equiv_g": EQ_PG,
+      "kcal_total": KK,
+      "resumo": "descrição curta: ex. 100 g arroz, 40 g feijão, 1 bife"
+    }</pre>
   </div>
 
-  REGRAS DE APRESENTAÇÃO
-  - Use o símbolo “⇒” para mostrar o arredondamento (ex.: 3,7U ⇒ 4U).
-  - Mostre 1 casa decimal nas contas intermediárias quando útil; doses finais sempre em inteiros.
-  - Use “g” para gramas e “kcal” para energia. Escreva “CHO” para carboidratos.
-  - Não use Markdown; **somente HTML**. Não repita o enunciado nem explique o que você está fazendo.
-  - Se não conseguir identificar algum item ou kcal, estime de forma conservadora e deixe claro com “~”.
+  REGRAS DE RENDERIZAÇÃO
+  - Apenas HTML. Não usar Markdown. Não repetir enunciados/instruções.
+  - Mostre 1 casa decimal quando útil nas contas intermediárias; doses finais sempre em inteiros.
+  - Use “g” para gramas, “kcal” para energia e “CHO” para carboidratos.
+  - Se não conseguir identificar algum item, estime de forma conservadora e sinalize com “~”.
 
-  BLOCO JSON OBRIGATÓRIO
-  Ao final do HTML inclua um bloco <pre>{...}</pre> contendo JSON com:
-  {
-    "carbo_g": <CHO_totais_liquidos>,             // em g; se puder, aplique SBD líquido
-    "carbo_totais_g": <opcional>,                 // totais antes de ajuste de fibras/polióis
-    "fibras_g": <opcional>,
-    "poliois_g": <opcional>,
-    "pg_cho_equiv_g": <equivalente CHO de proteína+gordura em g>,
-    "kcal_total": <kcal aproximadas da refeição>,
-    "resumo": "<descrição curta da refeição, ex.: '100g arroz, 40g feijão, 100g bife'>"
+  VALIDAÇÃO (consistência obrigatória)
+  - Os valores de “CHO_totais”, “EQ_PG” e as doses (YU, WU, QU, SU, TU) devem ser numericamente coerentes com a tabela e com as fórmulas SBD acima.
+  - “EQ_PG” deve SEMPRE ser calculado como: (kcalP × ${pgPct}% + kcalG × 10%) ÷ 10. **Nunca** use ÷4 aqui.
+  - “Insulina R (proteína/gordura)” (ou ultrarrápida em 2–3h, se ${strat} = split_rapid) deve SEMPRE ser: EQ_PG ÷ ${icr}, arredondado para inteiro.
+  `;
   }
 
-  OBSERVAÇÕES IMPORTANTES
-  - Se tiver dados para “Carboidratos líquidos (SBD)”, informe em "carbo_g". Se não, reporte "carbo_g" pelos melhores dados que tiver.
-  - Valores devem ser consistentes com a tabela e com as doses apresentadas.
-  - Nunca use cercas de código (sem \`\`\`), apenas HTML + o <pre>{...}</pre> final.
-  `;
-}
 
 
 
@@ -407,6 +418,45 @@ function parseProtGordFromTable(html){
   }
   return { prot_g: prot, gord_g: gord, partsP, partsG };
 }
+// Remove os <li> extras ("Proteínas:", "Gorduras:", "Proteínas + Gorduras (equivalente CHO)")
+function stripExtraPgLis(html){
+  return String(html)
+    .replace(/<li><b>Prote[ií]nas:\b[\s\S]*?<\/li>/i, "")
+    .replace(/<li><b>Gorduras:\b[\s\S]*?<\/li>/i, "")
+    .replace(/<li><b>Prote[ií]nas \+ Gorduras \(equivalente CHO\):[\s\S]*?<\/li>/i, "");
+}
+// Corrige a linha "Insulina R (proteína/gordura): ..." no bloco Insulina
+function patchRegularDose(html, regU){
+  let out = String(html);
+
+  // Linha do bloco "💉 Insulina"
+  out = out.replace(
+    /(<li><b>Insulina R \(prote[ií]na\/gordura\):[^<]*?)\d+(?:[.,]\d+)?U/i,
+    `$1${regU}U`
+  );
+
+  // Linha no "✅ Resumo da dose"
+  out = out.replace(
+    /(<li><b>Insulina R:?\s*<\/b>\s*)\d+(?:[.,]\d+)?U/i,
+    `$1${regU}U`
+  );
+
+  // Caso a estratégia seja rápida depois (split_rapid)
+  out = out.replace(
+    /(<li><b>Insulina [^<]*?2\s*[–-]\s*3\s*horas:?\s*<\/b>\s*)\d+(?:[.,]\d+)?U/i,
+    `$1${regU}U`
+  );
+
+  return out;
+}
+
+// Mantém o total com "XU + YU = ZU"
+function patchTotalBolus(html, rapidName, rapidU, regU){
+  const total = rapidU + regU;
+  const li = `<li><b>Total bolus:</b> ${rapidU}U + ${regU}U = <b>${total}U</b></li>`;
+  return String(html).replace(/<li><b>Total bolus:[\s\S]*?<\/li>/i, li);
+}
+
 
 
 // Insere/atualiza a linha de “Proteínas/gorduras … → X g CHO” nos Totais
@@ -438,10 +488,14 @@ function patchPgTotals(html, prot_g, gord_g, kcalP, kcalG, kcalSumConsiderada, c
 
 // Garante a regra SBD no HTML + JSON <pre> final (usa % do cadastro!)
 function enforcePgRule(html, cfg){
+  // % proteína DO CADASTRO
   const protPct = Math.max(0, Math.min(100, Number(cfg?.pct_cal_pf ?? 0)));
   const icr     = Number(cfg?.icr || cfg?.insulina_cho || 10);
 
-  const { prot_g, gord_g, partsP, partsG } = parseProtGordFromTable(html);
+  // limpa blocos duplicados antes de remontar tudo
+  let out = stripExtraPgLis(String(html));
+
+  const { prot_g, gord_g, partsP, partsG } = parseProtGordFromTable(out);
 
   const kcalP = prot_g * 4;
   const kcalG = gord_g * 9;
@@ -451,8 +505,9 @@ function enforcePgRule(html, cfg){
 
   const pg_cho_equiv_g = (kcalProtConsiderada + kcalGordConsiderada) / 10;
 
-  let out = patchPgTotals(
-    html,
+  // monta o ÚNICO bloco "Proteínas + Gorduras"
+  out = patchPgTotals(
+    out,
     prot_g, gord_g,
     kcalP, kcalG,
     (kcalProtConsiderada + kcalGordConsiderada),
@@ -461,6 +516,7 @@ function enforcePgRule(html, cfg){
     protPct
   );
 
+  // injeta pg_cho_equiv_g no <pre>{...}
   out = out.replace(
     /<pre[^>]*>\s*({[\s\S]*?})\s*<\/pre>/i,
     (m, jstr) => {
@@ -474,6 +530,7 @@ function enforcePgRule(html, cfg){
 
   return { html: out, pg_cho_equiv_g, doseRegular: icr>0 ? (pg_cho_equiv_g/icr) : 0, protPct };
 }
+
 
 
 
@@ -530,6 +587,13 @@ app.post("/api/chat", async (req, res) => {
       detalhes_html = "<em>Análise automática indisponível.</em>";
     }
 
+    const rapidName = String(cfg?.insulina_rapida || "Fiasp");
+    const totalRapida = r0(doseCho + doseCor);
+    const totalRegular = r0(dosePg);
+
+    // substitui a linha do HTML para "XU + YU = ZU"
+    detalhes_html = patchTotalBolus(detalhes_html, rapidName, totalRapida, totalRegular);
+  
     const icr = Number(cfg?.icr || cfg?.insulina_cho || 10);
     const isf = Number(cfg?.isf || cfg?.glicose_insulina || 50);
     const target = Number(cfg?.target || 100);
