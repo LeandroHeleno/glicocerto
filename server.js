@@ -389,29 +389,45 @@ function numBR(s){ const n = parseFloat(String(s||'').replace(/\./g,'').replace(
 // Tenta somar proteína(g) e gordura(g) a partir da tabela da resposta (fallback: 0)
 function parseProtGordFromTable(html){
   let prot = 0, gord = 0;
-  // <td>...Proteína</td> e <td>...Gordura</td> por linha da tabela
+  const partsP = [], partsG = [];
   const rows = String(html).match(/<tbody>[\s\S]*?<\/tbody>/i);
   if(rows){
     const tr = rows[0].match(/<tr[\s\S]*?<\/tr>/gi) || [];
     for(const r of tr){
       const tds = r.match(/<td[\s\S]*?<\/td>/gi) || [];
       if(tds.length >= 6){
-        const protTd = tds[4].replace(/<[^>]+>/g,'').trim();  // 5a coluna = Proteína
-        const gordTd = tds[5].replace(/<[^>]+>/g,'').trim();  // 6a coluna = Gordura
-        prot += numBR(protTd); // valores como "7g" ou "7"
-        gord += numBR(gordTd);
+        const protTd = tds[4].replace(/<[^>]+>/g,'').trim();
+        const gordTd = tds[5].replace(/<[^>]+>/g,'').trim();
+        const p = numBR(protTd); // aceita "7g" ou "7"
+        const g = numBR(gordTd);
+        if (p){ prot += p; partsP.push(p); }
+        if (g){ gord += g; partsG.push(g); }
       }
     }
   }
-  return { prot_g: prot, gord_g: gord };
+  return { prot_g: prot, gord_g: gord, partsP, partsG };
 }
 
+
 // Insere/atualiza a linha de “Proteínas/gorduras … → X g CHO” nos Totais
-function patchPgTotals(html, prot_g, gord_g, kcalP, kcalG, kcalSum, choEq){
-  const lp = `Proteína (${Math.round(prot_g)}g ×4 = ${Math.round(kcalP)} kcal × %cadastro)`;
-  const lg = `Gordura (${Math.round(gord_g)}g ×9 = ${Math.round(kcalG)} kcal × 10%)`;
-  const sum = `Carboidratos (p+g) = ${kcalSum.toFixed(1)} ÷10 = ${choEq.toFixed(1)} g CHO`;
-  const li  = `<li><b>Proteínas + Gorduras:</b><br>${lp}<br>${lg}<br>${sum}</li>`;
+function patchPgTotals(html, prot_g, gord_g, kcalP, kcalG, kcalSumConsiderada, choEq, partsP, partsG, protPct){
+  const fmt1 = (n) => Number(n).toFixed(1);
+  const protSumStr = partsP?.length ? `${partsP.map(x=>Math.round(x)).join(' + ')} = ${Math.round(prot_g)}g` : `${Math.round(prot_g)}g`;
+  const gordSumStr = partsG?.length ? `${partsG.map(x=>Math.round(x)).join(' + ')} = ${Math.round(gord_g)}g` : `${Math.round(gord_g)}g`;
+
+  const kcalProtPct = (kcalP * (protPct/100));
+  const kcalGord10  = (kcalG * 0.10);
+
+  const linhas = [
+    `<b>Proteínas + Gorduras:</b>`,
+    `Proteína: ${protSumStr} ×4 = ${Math.round(kcalP)} kcal × ${protPct}% = ${fmt1(kcalProtPct)} kcal`,
+    `Gordura: ${gordSumStr} ×9 = ${Math.round(kcalG)} kcal × 10% = ${fmt1(kcalGord10)} kcal`,
+    `Carboidratos (p+g) = ${fmt1(kcalProtPct)} + ${fmt1(kcalGord10)} = ${fmt1(kcalSumConsiderada)} kcal ÷10 = ${choEq.toFixed(1)} g CHO`
+  ];
+
+  const li = `<li>${linhas.join('<br>')}</li>`;
+
+  // se já existe o bloco, substitui; senão, insere logo após Carboidratos
   if (/<li><b>Proteínas \+ Gorduras:[\s\S]*?<\/li>/i.test(html)){
     return html.replace(/<li><b>Proteínas \+ Gorduras:[\s\S]*?<\/li>/i, li);
   }
@@ -419,36 +435,32 @@ function patchPgTotals(html, prot_g, gord_g, kcalP, kcalG, kcalSum, choEq){
 }
 
 
+
 // Garante a regra SBD no HTML + JSON <pre> final (usa % do cadastro!)
 function enforcePgRule(html, cfg){
-  // % proteína DO CADASTRO
-  const protPct = Math.max(0, Math.min(100, Number(cfg?.pct_cal_pf ?? 0))); 
-  const icr     = Number(cfg?.icr || cfg?.insulina_cho || 10);              
+  const protPct = Math.max(0, Math.min(100, Number(cfg?.pct_cal_pf ?? 0)));
+  const icr     = Number(cfg?.icr || cfg?.insulina_cho || 10);
 
-  const { prot_g, gord_g } = parseProtGordFromTable(html);
+  const { prot_g, gord_g, partsP, partsG } = parseProtGordFromTable(html);
 
   const kcalP = prot_g * 4;
   const kcalG = gord_g * 9;
 
-  // **Aplicar % de proteína do cadastro e 10% fixo para gordura**
   const kcalProtConsiderada = kcalP * (protPct/100);
   const kcalGordConsiderada = kcalG * 0.10;
 
-  // **Converter para gCHO equivalentes**
-  const pg_cho_equiv_g = (kcalProtConsiderada + kcalGordConsiderada) / 10; // ÷10, não ÷4
+  const pg_cho_equiv_g = (kcalProtConsiderada + kcalGordConsiderada) / 10;
 
-  const doseRegular = icr > 0 ? (pg_cho_equiv_g / icr) : 0;
-
-  // Atualizar Totais
   let out = patchPgTotals(
     html,
     prot_g, gord_g,
     kcalP, kcalG,
-    (kcalProtConsiderada+kcalGordConsiderada),
-    pg_cho_equiv_g
+    (kcalProtConsiderada + kcalGordConsiderada),
+    pg_cho_equiv_g,
+    partsP, partsG,
+    protPct
   );
 
-  // Atualizar JSON <pre>
   out = out.replace(
     /<pre[^>]*>\s*({[\s\S]*?})\s*<\/pre>/i,
     (m, jstr) => {
@@ -460,8 +472,9 @@ function enforcePgRule(html, cfg){
     }
   );
 
-  return { html: out, pg_cho_equiv_g, doseRegular, protPct };
+  return { html: out, pg_cho_equiv_g, doseRegular: icr>0 ? (pg_cho_equiv_g/icr) : 0, protPct };
 }
+
 
 
 /* ===================== CHAT (TEXTO) ===================== */
