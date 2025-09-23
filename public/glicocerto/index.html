@@ -301,7 +301,7 @@
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.9.03 Beta</div>
+            <div>v1.9.05 Beta</div>
           </div>
         </div>
       </div>
@@ -1295,7 +1295,7 @@
     (async function(){
       const { jsPDF } = window.jspdf || {};
       const BRAND_BLUE = '#1976D2';          // troque pela cor do app, ex: '#0EA5E9'
-      const TITLE_TEXT = 'GlicoCerto';       // título da marca no cabeçalho
+      const TITLE_TEXT = 'GlicoCerto - RELATÓRIO DIARIO ALIMENTAR ';       // título da marca no cabeçalho
 
       // === util: HEX → [r,g,b]
       const hexToRgb = (hex)=>{
@@ -1319,65 +1319,42 @@
         if(!y || !m || !d) return iso;
         return `${d.padStart(2,'0')}/${m.padStart(2,'0')}/${y}`;
       }
-      // === tenta obter o NOME do paciente do cadastro
+
+      // === pega o NOME do paciente direto do Supabase
       async function getNomePaciente() {
-        // 0) Se já guardamos em cache nesta sessão, use
+        // cache simples para não bater no backend a cada clique
         if (window.__PACIENTE_NOME_CACHE) return window.__PACIENTE_NOME_CACHE;
 
-        // 1) Objetos globais comuns no app
-        const globCands = [
-          window.APP_CONFIG?.paciente?.nome,
-          window.APP_CONFIG?.nome,
-          window.CONFIG?.paciente?.nome,
-          window.CONFIG?.nome,
-          window.state?.config?.paciente_nome,
-          window.state?.paciente?.nome,
-        ].filter(Boolean);
-        if (globCands[0]) return (window.__PACIENTE_NOME_CACHE = String(globCands[0]).trim());
-
-        // 2) DOM: inputs/spans/atributos que possam conter o nome
-        const selList = [
-          '#paciente_nome','input[name="paciente_nome"]','input[name="nome"]',
-          '[data-paciente-nome]','.paciente-nome','#nomePaciente',
-          '.card-paciente .nome','.profile-name','.user-name','[data-user-name]'
-        ];
-        for (const s of selList) {
-          const el = document.querySelector(s);
-          const v = (el?.value ?? el?.textContent ?? '').trim();
-          if (v) return (window.__PACIENTE_NOME_CACHE = v);
-        }
-
-        // 3) localStorage: vasculha chaves com JSON e procura campos “paciente.nome”, “nome”
         try {
-          for (let i = 0; i < localStorage.length; i++) {
-            const k = localStorage.key(i);
-            const raw = localStorage.getItem(k);
-            if (!raw || raw.length > 20000) continue; // pula blobs grandes
-            try {
-              const j = JSON.parse(raw);
-              const cand = j?.paciente?.nome || j?.nome || j?.profile?.nome || j?.user?.nome;
-              if (cand) return (window.__PACIENTE_NOME_CACHE = String(cand).trim());
-            } catch {/* ignora não-JSON */}
-          }
-        } catch {/* storage bloqueado */}
+          // precisa do USER_ID e do header de auth que você já usa no app
+          if (!USER_ID) throw new Error('Sem usuário');
 
-        // 4) Backend: tente algumas rotas comuns (ajuste se o seu servidor expõe outra)
-        const urls = ['/api/config','/api/paciente','/api/profile'];
-        for (const u of urls) {
-          try {
-            const r = await fetch(u, { credentials: 'include' });
-            if (!r.ok) continue;
-            const j = await r.json();
-            const cand = j?.paciente?.nome || j?.nome || j?.paciente_nome || j?.profile?.nome;
-            if (cand) return (window.__PACIENTE_NOME_CACHE = String(cand).trim());
-          } catch {/* segue a próxima */}
+          const h = await getAuthHeaders(); // já existente no arquivo
+          const r = await fetch(`/api/paciente/${encodeURIComponent(USER_ID)}`, {
+            headers: { ...h }
+          });
+          const j = await r.json();
+
+          const nome = (j?.data?.nome || '').trim();
+          if (nome) {
+            window.__PACIENTE_NOME_CACHE = nome;
+            return nome;
+          }
+        } catch (e) {
+          console.warn('getNomePaciente via Supabase falhou:', e?.message || e);
         }
 
-        // 5) Fallback final
-        return (window.__PACIENTE_NOME_CACHE = 'Paciente');
+        // fallbacks gentis (caso o fetch falhe)
+        const v = (document.getElementById('nome')?.value || '').trim();
+        if (v) {
+          window.__PACIENTE_NOME_CACHE = v;
+          return v;
+        }
+        return 'Paciente';
       }
 
-      // === tenta achar um ícone (favicon ou .logo) para o cabeçalho
+
+      // === Icone (favicon ou .logo) para o cabeçalho
       async function getAppIconDataURL(sizePx = 128){
         const guesses = [
           'link[rel="icon"][href$=".png"]','link[rel="icon"]',
@@ -1452,7 +1429,7 @@
 
         const doc = new jsPDF({ unit:'mm', format:'a4', orientation:'portrait' });
         const [r,g,b] = hexToRgb(BRAND_BLUE);
-        const margin = 15;
+        const margin = 8;
         const pageW = doc.internal.pageSize.getWidth();
         const pageH = doc.internal.pageSize.getHeight();
 
@@ -1467,7 +1444,7 @@
         const bodyStyles = { halign:'center', valign:'middle' };
 
         doc.autoTable({
-          startY: margin + 14, // espaço para o cabeçalho azul (12mm) + respiro
+          startY: margin + 10, // espaço para o cabeçalho azul (12mm) + respiro
           head: [headers],
           body: rows,
           margin: { left: margin, right: margin, top: margin, bottom: margin },
