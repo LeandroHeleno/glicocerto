@@ -1279,7 +1279,7 @@
         const r = i + 1;           // +1 por causa do header (data[0])
         const c = 8;               // 0-based → 8 = 9ª coluna
         const addr = XLSX.utils.encode_cell({ r, c });
-        ws[addr] = { f: `IMAGE("${link}","",3,80,80)` };
+        ws[addr] = { f: `IMAGEM("${link}","",3,80,80)` };
       }
 
       // Largura/altura p/ caber miniaturas 80x80
