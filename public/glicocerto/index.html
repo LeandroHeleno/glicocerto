@@ -304,7 +304,7 @@
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.9.14 Beta</div>
+            <div>v1.9.15 Beta</div>
           </div>
         </div>
       </div>
@@ -1557,7 +1557,7 @@
       }
 
       // Desenha o gráfico num canvas offscreen e insere como imagem no PDF
-      async function addChartToPdfFromTable(doc, series){
+      async function addChartToPdfFromTable(doc, series, opts){
         if (!series || !series.labels.length) return;
 
         await ensureChartJs();
