@@ -270,6 +270,9 @@
   <!-- jsPDF e AutoTable (CDN) Gerar PDF-->
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.3/dist/jspdf.plugin.autotable.min.js"></script>
+  <!-- Chart.js (para desenhar o gráfico do PDF) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+
 
 </head>
 <body>
@@ -301,7 +304,7 @@
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.9.08 Beta</div>
+            <div>v1.9.09 Beta</div>
           </div>
         </div>
       </div>
@@ -1493,9 +1496,20 @@
             }
           }
         });
-
+        async function ensureChartJs(){
+          if (window.Chart) return;
+          await new Promise((ok, err)=>{
+            const s = document.createElement('script');
+            s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js';
+            s.onload = ok; s.onerror = () => err(new Error('Falha ao carregar Chart.js'));
+            document.head.appendChild(s);
+          });
+        }
         // === gráfico de linhas no final ===
         async function addChartToPdf(doc, startY, userId, ini, fim) {
+          // <= garanta que Chart está carregado
+          await ensureChartJs();
+
           const h = await getAuthHeaders();
           const params = new URLSearchParams({ userId });
           if (ini) params.set('start', new Date(ini+'T00:00:00').toISOString());
@@ -1505,40 +1519,57 @@
           const j = await r.json();
           if (!j.ok || !Array.isArray(j.data) || !j.data.length) return;
 
-          // prepara arrays
-          const labels = j.data.map(r => new Date(r.data_hora).toLocaleDateString());
+          const labels   = j.data.map(r => new Date(r.data_hora).toLocaleDateString());
           const glicemia = j.data.map(r => Number(r.glicemia||0));
           const choPg    = j.data.map(r => Number(r.cho_total_g||0) + Number(r.pg_cho_equiv_g||0));
 
-          // cria canvas offscreen
+          // canvas offscreen
           const canvas = document.createElement('canvas');
-          canvas.width = 600; canvas.height = 300;
+          canvas.width = 900; canvas.height = 450;
           const ctx = canvas.getContext('2d');
 
-          // desenha chart.js
+          // desenha o gráfico
           await new Promise(ok=>{
             new Chart(ctx, {
               type: 'line',
               data: {
                 labels,
                 datasets: [
-                  { label:'Glicemia (mg/dL)', data:glicemia, borderColor:'#e11d48', fill:false },
-                  { label:'CHO+P+G (g)', data:choPg, borderColor:'#1565c0', fill:false }
+                  { label:'Glicemia (mg/dL)', data:glicemia, borderColor:'#e11d48', tension:0.25, fill:false },
+                  { label:'CHO+P+G (g)',     data:choPg,    borderColor:'#1565c0', tension:0.25, fill:false }
                 ]
               },
-              options:{ responsive:false, plugins:{ legend:{ position:'bottom' } } }
+              options: {
+                responsive: false,
+                plugins: { legend: { position: 'bottom' } },
+                scales: {
+                  x: { title: { display:true, text:'Data' } },
+                  y: { title: { display:true, text:'mg/dL / g' }, beginAtZero: true }
+                }
+              }
             });
-            setTimeout(ok, 800); // espera render
+            // pequeno atraso para garantir o render
+            setTimeout(ok, 300);
           });
 
           const imgData = canvas.toDataURL('image/png');
           doc.addPage();
           doc.setFontSize(12);
-          doc.text('Gráfico de Glicemia e CHO+P+G', 15, 20);
-          doc.addImage(imgData, 'PNG', 15, 30, 180, 90); // ajusta tamanho
+          doc.text('GlicoCerto — Gráfico (Glicemia vs CHO+P+G)', 15, 18);
+          // largura ~180mm mantendo proporção 2:1 (900x450)
+          doc.addImage(imgData, 'PNG', 15, 24, 180, 90);
+        }
+        
+        async function ensureChartJs(){
+          if (window.Chart) return;
+          await new Promise((ok, err)=>{
+            const s = document.createElement('script');
+            s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js';
+            s.onload = ok; s.onerror = () => err(new Error('Falha ao carregar Chart.js'));
+            document.head.appendChild(s);
+          });
         }
 
-        await addChartToPdf(doc, doc.lastAutoTable.finalY || 20, USER_ID, ini, fim);
         doc.save('historico.pdf');
       });
     })();
