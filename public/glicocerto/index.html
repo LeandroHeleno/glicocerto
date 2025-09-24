@@ -46,7 +46,7 @@
     .avatar,.initials{ width:28px; height:28px; border-radius:50%; }
     .avatar{ object-fit:cover; background:#eee; border:1px solid rgba(0,0,0,.05); }
     .initials{ display:grid; place-items:center; background:#0ea5e9; color:#fff; font-weight:700; font-size:12px; border:1px solid rgba(0,0,0,.05); }
-    .menu-btn{ background:#fff; color:#111827; border:none; border-radius:10px; min-height:32px; padding:6px 10px; cursor:pointer; font-weight:600; }
+    .menu-btn{ background:#aaf; color:#111827; border:none; border-radius:10px; min-height:32px; padding:6px 10px; cursor:pointer; font-weight:600; }
 
     /* Dropdown que respeita o TEMA */
     .dropdown{
@@ -304,7 +304,7 @@
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.9.12 Beta</div>
+            <div>v1.9.13 Beta</div>
           </div>
         </div>
       </div>
@@ -490,9 +490,9 @@
           <button class="btn" id="btnSemana">Últimos 7 dias</button>
           <button class="btn" id="btnMes">Últimos 30 dias</button>
         </div>
-        <div class="row" style="margin-top:10px; gap:8px;">
-          <button class="btn" id="btnBaixarXlsx">Baixar XLSX (filtro)</button>
-          <button class="btn" id="btnBaixarPdf">Baixar PDF (filtro)</button>
+        <div class="row" style="margin-top:10px; gap:8px;" align-items:right>
+          <button class="menu-btn" id="btnBaixarXlsx">Baixar XLSX)</button>
+          <button class="menu-btn" id="btnBaixarPdf">Baixar PDF)</button>
         </div>
 
         <div class="table-wrap" style="margin-top:12px;">
