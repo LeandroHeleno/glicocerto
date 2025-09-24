@@ -304,7 +304,7 @@
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.9.09 Beta</div>
+            <div>v1.9.10 Beta</div>
           </div>
         </div>
       </div>
@@ -1423,6 +1423,130 @@
         return { headers, rows, fotoCol, photoLinks };
       }
 
+      // Garante Chart.js disponível (caso o script ainda não tenha carregado)
+      async function ensureChartJs(){
+        if (window.Chart) return;
+        await new Promise((ok, err)=>{
+          const s = document.createElement('script');
+          s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js';
+          s.onload = ok; s.onerror = () => err(new Error('Falha ao carregar Chart.js'));
+          document.head.appendChild(s);
+        });
+      }
+
+      // Extrai as séries diretamente da tabela #tHistorico já filtrada
+      function extractSeriesFromTable(){
+        const table = document.getElementById('tHistorico');
+        if (!table) return null;
+
+        const headers = [...table.querySelectorAll('thead th')].map(th => th.textContent.trim());
+        const idxData = headers.findIndex(h => /^data$/i.test(h) || h.toLowerCase().startsWith('data'));
+        const idxGlic = headers.findIndex(h => /^glicemia$/i.test(h));
+        const idxCho  = headers.findIndex(h => /^total\s*cho/i.test(h));
+        const idxPg   = headers.findIndex(h => /^total\s*gordura\+proteína/i.test(h) || /cho eq/i.test(h));
+
+        const bodyRows = [...table.querySelectorAll('tbody tr')].filter(tr=>{
+          const t0 = tr.cells?.[0]?.innerText?.trim() || '';
+          return t0 && t0 !== 'Sem registros.' && t0 !== 'Carregando...';
+        });
+
+        const labels = [];
+        const glicemia = [];
+        const choPg = [];
+
+        bodyRows.forEach(tr=>{
+          const tds = tr.cells;
+          const label = (tds[idxData]?.innerText || '').trim(); // já está formatado pela tabela
+          const g  = parseFloat((tds[idxGlic]?.innerText || '').replace(',','.'));
+          const ch = parseFloat((tds[idxCho ]?.innerText || '').replace(',','.'));
+          const pg = parseFloat((tds[idxPg  ]?.innerText || '').replace(',','.'));
+
+          if (isFinite(g) && isFinite(ch) && isFinite(pg)) {
+            labels.push(label);
+            glicemia.push(g);
+            choPg.push(ch + pg);
+          }
+        });
+
+        return { labels, glicemia, choPg };
+      }
+
+      // Desenha o gráfico num canvas offscreen e insere como imagem no PDF
+      async function addChartToPdfFromTable(doc, series){
+        if (!series || !series.labels.length) return; // nada para plotar
+
+        await ensureChartJs();
+
+        // canvas offscreen grande para boa definição no PDF
+        const canvas = document.createElement('canvas');
+        canvas.width = 1200;  // proporção 2:1
+        canvas.height = 600;
+        const ctx = canvas.getContext('2d');
+
+        // Gráfico com dois eixos Y (mg/dL x g)
+        const chart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: series.labels,
+            datasets: [
+              {
+                label: 'Glicemia (mg/dL)',
+                data: series.glicemia,
+                yAxisID: 'yGlic',
+                borderColor: '#e11d48',
+                fill: false,
+                tension: 0.25,
+                pointRadius: 2
+              },
+              {
+                label: 'CHO + P + G (g)',
+                data: series.choPg,
+                yAxisID: 'yChoPg',
+                borderColor: '#1565c0',
+                fill: false,
+                tension: 0.25,
+                pointRadius: 2
+              }
+            ]
+          },
+          options: {
+            animation: false,          // evita timing issues
+            responsive: false,         // canvas tem tamanho fixo
+            plugins: {
+              legend: { position: 'bottom' },
+              title:  { display: false }
+            },
+            scales: {
+              x: { title: { display: true, text: 'Data/Hora' }, ticks: { autoSkip: true, maxTicksLimit: 8 } },
+              yGlic: {
+                type: 'linear',
+                position: 'left',
+                title: { display: true, text: 'mg/dL' },
+                beginAtZero: true
+              },
+              yChoPg: {
+                type: 'linear',
+                position: 'right',
+                title: { display: true, text: 'g' },
+                beginAtZero: true,
+                grid: { drawOnChartArea: false } // para não confundir com o eixo da glicemia
+              }
+            }
+          }
+        });
+
+        // Converte para imagem e adiciona no PDF
+        const imgData = canvas.toDataURL('image/png');
+        chart.destroy(); // libera memória
+
+        doc.addPage();
+        doc.setFontSize(12);
+        doc.text('Gráfico — Glicemia vs CHO+P+G (período filtrado)', 15, 18);
+        // largura 180mm mantendo a proporção (1200x600 → 2:1) → altura ~90mm
+        doc.addImage(imgData, 'PNG', 15, 24, 180, 90);
+      }
+
+
       document.getElementById('btnBaixarPdf')?.addEventListener('click', async ()=>{
         const [nomePaciente, logoDataUrl] = await Promise.all([ getNomePaciente(), getAppIconDataURL(160) ]);
         const { headers, rows, fotoCol, photoLinks } = coletarHistorico();
@@ -1496,15 +1620,8 @@
             }
           }
         });
-        async function ensureChartJs(){
-          if (window.Chart) return;
-          await new Promise((ok, err)=>{
-            const s = document.createElement('script');
-            s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js';
-            s.onload = ok; s.onerror = () => err(new Error('Falha ao carregar Chart.js'));
-            document.head.appendChild(s);
-          });
-        }
+        
+
         // === gráfico de linhas no final ===
         async function addChartToPdf(doc, startY, userId, ini, fim) {
           // <= garanta que Chart está carregado
@@ -1552,12 +1669,7 @@
             setTimeout(ok, 300);
           });
 
-          const imgData = canvas.toDataURL('image/png');
-          doc.addPage();
-          doc.setFontSize(12);
-          doc.text('GlicoCerto — Gráfico (Glicemia vs CHO+P+G)', 15, 18);
-          // largura ~180mm mantendo proporção 2:1 (900x450)
-          doc.addImage(imgData, 'PNG', 15, 24, 180, 90);
+          
         }
         
         async function ensureChartJs(){
@@ -1569,6 +1681,14 @@
             document.head.appendChild(s);
           });
         }
+
+        try {
+          const series = extractSeriesFromTable();
+          await addChartToPdfFromTable(doc, series);  // nova página com o gráfico
+        } catch (e) {
+          console.warn('Falha ao gerar gráfico no PDF:', e);
+        }
+
 
         doc.save('historico.pdf');
       });
