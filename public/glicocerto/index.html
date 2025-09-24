@@ -46,7 +46,7 @@
     .avatar,.initials{ width:28px; height:28px; border-radius:50%; }
     .avatar{ object-fit:cover; background:#eee; border:1px solid rgba(0,0,0,.05); }
     .initials{ display:grid; place-items:center; background:#0ea5e9; color:#fff; font-weight:700; font-size:12px; border:1px solid rgba(0,0,0,.05); }
-    .menu-btn{ background:#aaf; color:#111827; border:none; border-radius:10px; min-height:32px; padding:6px 10px; cursor:pointer; font-weight:600; }
+    .menu-btn{ background:#ddf; color:#111827; border:none; border-radius:10px; min-height:32px; padding:6px 10px; cursor:pointer; font-weight:600; }
 
     /* Dropdown que respeita o TEMA */
     .dropdown{
@@ -304,7 +304,7 @@
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.9.13 Beta</div>
+            <div>v1.9.14 Beta</div>
           </div>
         </div>
       </div>
@@ -1308,6 +1308,41 @@
         return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
       };
 
+      function drawHeaderFooter(doc, { brandHex, titleText, nomePaciente, logoDataUrl, filtroTxt, margin = 10.5 }){
+        const [r,g,b] = (typeof hexToRgb === 'function') ? hexToRgb(brandHex) : [25,118,210];
+        const pageW = doc.internal.pageSize.getWidth();
+        const pageH = doc.internal.pageSize.getHeight();
+
+        // Cabeçalho (12mm)
+        doc.setFillColor(r,g,b);
+        doc.rect(0, 0, pageW, 12, 'F');
+        if (logoDataUrl) doc.addImage(logoDataUrl, 'PNG', margin, 2.3, 7.4, 7.4);
+        doc.setFontSize(11); 
+        doc.setTextColor(255,255,255);
+        doc.text(`${titleText} — ${nomePaciente}`, margin + (logoDataUrl ? 12 : 0), 8.5);
+
+        // Rodapé (14mm)
+        doc.setFillColor(r,g,b);
+        doc.rect(0, pageH - 14, pageW, 14, 'F');
+
+        const dateStr = new Date().toLocaleString();
+        doc.setFontSize(9); 
+        doc.setTextColor(255,255,255);
+
+        // esquerda: data/hora
+        doc.text(dateStr, margin, pageH - 6);
+
+        // centro: filtro
+        if (filtroTxt) doc.text(filtroTxt, pageW/2, pageH - 6, { align:'center' });
+
+        // direita: página atual (usa total até o momento, funciona por página)
+        const curPage = (doc.internal.getPageInfo?.().pageNumber) || doc.internal.getNumberOfPages();
+        doc.text(`Página ${curPage}`, pageW - margin, pageH - 6, { align:'right' });
+
+        // volta texto para preto p/ conteúdo
+        doc.setTextColor(20,20,20);
+      }
+
       // === pega as duas datas do filtro (primeiros <input type="date"> da área de filtros)
       function getFilterDates() {
         const root = document.getElementById('filtros') || document;
@@ -1646,7 +1681,14 @@
         const imgData = canvas.toDataURL('image/png');
         chart.destroy();
 
-        doc.addPage();
+        doc.addPage();                       // nova página
+        drawHeaderFooter(doc, {              // desenha header/footer nesta página
+          brandHex: opts.brandHex,           // ex.: BRAND_BLUE
+          titleText: opts.titleText,         // ex.: TITLE_TEXT
+          nomePaciente: opts.nomePaciente,
+          logoDataUrl: opts.logoDataUrl,
+          filtroTxt: opts.filtroTxt,
+          margin: opts.margin ?? 10.5});
         doc.setFontSize(12);
         doc.text('Gráfico — Glicemia vs CHO+P+G vs Insulina Total (período filtrado)', 15, 18);
         doc.addImage(imgData, 'PNG', 15, 24, 180, 90); // 180×90 mm = proporção 2:1
@@ -1686,30 +1728,15 @@
           headStyles, bodyStyles,
           alternateRowStyles: { fillColor: [230,240,255] },
 
-          didDrawPage: (data) => {
-            // ===== CABEÇALHO AZUL (12mm) =====
-            doc.setFillColor(r,g,b);
-            doc.rect(0, 0, pageW, 12, 'F');
-            if (logoDataUrl) doc.addImage(logoDataUrl, 'PNG', margin, 2.3, 7.4, 7.4);
-            doc.setFontSize(11); doc.setTextColor(255,255,255);
-            doc.text(`${TITLE_TEXT} — ${nomePaciente}`, margin + (logoDataUrl ? 12 : 0), 8.5);
-
-            // ===== RODAPÉ AZUL (14mm) =====
-            doc.setFillColor(r,g,b);
-            doc.rect(0, pageH - 14, pageW, 14, 'F');
-
-            const dateStr = new Date().toLocaleString();
-            doc.setFontSize(9); doc.setTextColor(255,255,255);
-
-            // esquerda: data/hora
-            doc.text(dateStr, margin, pageH - 6);
-
-            // centro: Filtro (datas)
-            doc.text(filtroTxt, pageW/2, pageH - 6, { align:'center' });
-
-            // direita: página
-            const pageStr = `Página ${doc.internal.getNumberOfPages()}`;
-            doc.text(pageStr, pageW - margin, pageH - 6, { align:'right' });
+          didDrawPage: () => {
+            drawHeaderFooter(doc, {
+              brandHex: BRAND_BLUE,
+              titleText: TITLE_TEXT,
+              nomePaciente,
+              logoDataUrl,
+              filtroTxt,
+              margin
+            });
           },
 
           // desenha miniatura na célula de Foto/Imagem, se houver
@@ -1791,7 +1818,14 @@
 
         try {
           const series = extractSeriesFromTable();
-          await addChartToPdfFromTable(doc, series);  // nova página com o gráfico
+          await addChartToPdfFromTable(doc, series, {
+            brandHex: BRAND_BLUE,
+            titleText: TITLE_TEXT,
+            nomePaciente,
+            logoDataUrl,
+            filtroTxt,
+            margin // usa o mesmo margin já definido acima (10.5)
+          });
         } catch (e) {
           console.warn('Falha ao gerar gráfico no PDF:', e);
         }
