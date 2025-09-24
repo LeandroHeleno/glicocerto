@@ -304,7 +304,7 @@
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.9.15 Beta</div>
+            <div>v1.9.16 Beta</div>
           </div>
         </div>
       </div>
@@ -1308,25 +1308,37 @@
         return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
       };
 
-      function drawHeaderFooter(doc, { brandHex, titleText, nomePaciente, logoDataUrl, filtroTxt, margin = 10.5 }){
-        const [r,g,b] = (typeof hexToRgb === 'function') ? hexToRgb(brandHex) : [25,118,210];
+      function drawHeaderFooter(doc, {
+        brandHex,
+        titleText,
+        nomePaciente,
+        logoDataUrl,
+        filtroTxt,
+        curPage,        // <- número da página vindo do caller
+        margin = 10.5
+      }){
+        // cor da marca
+        const rgb = (typeof hexToRgb === 'function') ? hexToRgb(brandHex) : [25,118,210];
+        const [r,g,b] = rgb;
+
+        // dimensões
         const pageW = doc.internal.pageSize.getWidth();
         const pageH = doc.internal.pageSize.getHeight();
 
-        // Cabeçalho (12mm)
+        // Cabeçalho
         doc.setFillColor(r,g,b);
         doc.rect(0, 0, pageW, 12, 'F');
         if (logoDataUrl) doc.addImage(logoDataUrl, 'PNG', margin, 2.3, 7.4, 7.4);
-        doc.setFontSize(11); 
+        doc.setFontSize(11);
         doc.setTextColor(255,255,255);
-        doc.text(`${titleText} — ${nomePaciente}`, margin + (logoDataUrl ? 12 : 0), 8.5);
+        doc.text(`${titleText} — ${nomePaciente || ''}`, margin + (logoDataUrl ? 12 : 0), 8.5);
 
-        // Rodapé (14mm)
+        // Rodapé
         doc.setFillColor(r,g,b);
         doc.rect(0, pageH - 14, pageW, 14, 'F');
 
         const dateStr = new Date().toLocaleString();
-        doc.setFontSize(9); 
+        doc.setFontSize(9);
         doc.setTextColor(255,255,255);
 
         // esquerda: data/hora
@@ -1335,13 +1347,14 @@
         // centro: filtro
         if (filtroTxt) doc.text(filtroTxt, pageW/2, pageH - 6, { align:'center' });
 
-        // direita: página atual (usa total até o momento, funciona por página)
-        const curPage = (doc.internal.getPageInfo?.().pageNumber) || doc.internal.getNumberOfPages();
-        doc.text(`Página ${curPage}`, pageW - margin, pageH - 6, { align:'right' });
+        // direita: número da página (use SEMPRE o valor passado pelo caller)
+        const pageNum = Number.isFinite(curPage) ? curPage : doc.internal.getNumberOfPages();
+        doc.text(`Página ${pageNum}`, pageW - margin, pageH - 6, { align:'right' });
 
-        // volta texto para preto p/ conteúdo
+        // reset cor do texto
         doc.setTextColor(20,20,20);
       }
+
 
       // === pega as duas datas do filtro (primeiros <input type="date"> da área de filtros)
       function getFilterDates() {
@@ -1682,13 +1695,15 @@
         chart.destroy();
 
         doc.addPage();                       // nova página
-        drawHeaderFooter(doc, {              // desenha header/footer nesta página
-          brandHex: opts.brandHex,           // ex.: BRAND_BLUE
-          titleText: opts.titleText,         // ex.: TITLE_TEXT
+        drawHeaderFooter(doc, {
+          brandHex: opts.brandHex,
+          titleText: opts.titleText,
           nomePaciente: opts.nomePaciente,
           logoDataUrl: opts.logoDataUrl,
           filtroTxt: opts.filtroTxt,
-          margin: opts.margin ?? 10.5});
+          curPage: doc.getNumberOfPages(),   // <- página atual sem getPageInfo
+          margin: opts.margin ?? 10.5
+        });
         doc.setFontSize(12);
         doc.text('Gráfico — Glicemia vs CHO+P+G vs Insulina Total (período filtrado)', 15, 18);
         doc.addImage(imgData, 'PNG', 15, 24, 180, 90); // 180×90 mm = proporção 2:1
@@ -1728,16 +1743,18 @@
           headStyles, bodyStyles,
           alternateRowStyles: { fillColor: [230,240,255] },
 
-          didDrawPage: () => {
+          didDrawPage: (data) => {
             drawHeaderFooter(doc, {
               brandHex: BRAND_BLUE,
               titleText: TITLE_TEXT,
               nomePaciente,
               logoDataUrl,
               filtroTxt,
+              curPage: data.pageNumber,  // <- seguro
               margin
             });
           },
+
 
           // desenha miniatura na célula de Foto/Imagem, se houver
           didDrawCell: (data) => {
