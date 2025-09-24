@@ -1440,50 +1440,84 @@
         if (!table) return null;
 
         const headers = [...table.querySelectorAll('thead th')].map(th => th.textContent.trim());
+
         const idxData = headers.findIndex(h => /^data$/i.test(h) || h.toLowerCase().startsWith('data'));
         const idxGlic = headers.findIndex(h => /^glicemia$/i.test(h));
         const idxCho  = headers.findIndex(h => /^total\s*cho/i.test(h));
         const idxPg   = headers.findIndex(h => /^total\s*gordura\+proteína/i.test(h) || /cho eq/i.test(h));
+        const idxInsCho = headers.findIndex(h => /^total\s*insulina\s*cho/i.test(h));
+        const idxInsPg  = headers.findIndex(h => /^total\s*insulina\s*proteina\s*\+\s*gordura/i.test(h));
 
-        const bodyRows = [...table.querySelectorAll('tbody tr')].filter(tr=>{
+        const rows = [...table.querySelectorAll('tbody tr')].filter(tr=>{
           const t0 = tr.cells?.[0]?.innerText?.trim() || '';
           return t0 && t0 !== 'Sem registros.' && t0 !== 'Carregando...';
         });
 
-        const labels = [];
-        const glicemia = [];
-        const choPg = [];
+        // Helper robusto para converter texto de Data/Hora da tabela em timestamp
+        const parseTs = (s)=>{
+          // tenta parse direto
+          let d = new Date(s);
+          if (!isNaN(d)) return d.getTime();
 
-        bodyRows.forEach(tr=>{
-          const tds = tr.cells;
-          const label = (tds[idxData]?.innerText || '').trim(); // já está formatado pela tabela
-          const g  = parseFloat((tds[idxGlic]?.innerText || '').replace(',','.'));
-          const ch = parseFloat((tds[idxCho ]?.innerText || '').replace(',','.'));
-          const pg = parseFloat((tds[idxPg  ]?.innerText || '').replace(',','.'));
-
-          if (isFinite(g) && isFinite(ch) && isFinite(pg)) {
-            labels.push(label);
-            glicemia.push(g);
-            choPg.push(ch + pg);
+          // fallback: tenta DD/MM/AAAA HH:MM
+          const m = String(s).match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})(?:\s+(\d{1,2}):(\d{2}))?/);
+          if (m){
+            const dd = +m[1], mm = +m[2], yyyy = +m[3] < 100 ? 2000 + (+m[3]) : +m[3];
+            const HH = +(m[4] ?? 0), MI = +(m[5] ?? 0);
+            return new Date(yyyy, mm-1, dd, HH, MI, 0, 0).getTime();
           }
-        });
+          // como último recurso, retorna agora (evita NaN quebrando ordenação)
+          return Date.now();
+        };
 
-        return { labels, glicemia, choPg };
+        const items = rows.map(tr=>{
+          const tds = tr.cells;
+          const dataTxt = (tds[idxData]?.innerText || '').trim();
+          const ts = parseTs(dataTxt);
+
+          const toNum = v => parseFloat(String(v).replace(',','.'));
+          const g   = toNum(tds[idxGlic]?.innerText || '');
+          const cho = toNum(tds[idxCho ]?.innerText || '');
+          const pg  = toNum(tds[idxPg  ]?.innerText || '');
+          const insCho = toNum(tds[idxInsCho]?.innerText || '');
+          const insPg  = toNum(tds[idxInsPg ]?.innerText || '');
+
+          return {
+            ts,
+            label: dataTxt,                // mantém o rótulo exatamente como aparece na tabela
+            glicemia: isFinite(g) ? g : null,
+            choPg:   (isFinite(cho)?cho:0) + (isFinite(pg)?pg:0),
+            insTotal: (isFinite(insCho)?insCho:0) + (isFinite(insPg)?insPg:0)
+          };
+        })
+        // filtra linhas inválidas
+        .filter(x => x.glicemia !== null)
+        // ordena ASC (mais antigo → mais recente)
+        .sort((a,b)=> a.ts - b.ts);
+
+        if (!items.length) return null;
+
+        return {
+          labels:   items.map(x => x.label),
+          glicemia: items.map(x => x.glicemia),
+          choPg:    items.map(x => x.choPg),
+          insTotal: items.map(x => x.insTotal)
+        };
       }
 
       // Desenha o gráfico num canvas offscreen e insere como imagem no PDF
       async function addChartToPdfFromTable(doc, series){
-        if (!series || !series.labels.length) return; // nada para plotar
+        if (!series || !series.labels.length) return;
 
         await ensureChartJs();
 
-        // canvas offscreen grande para boa definição no PDF
+        // Canvas offscreen grande para boa definição no PDF
         const canvas = document.createElement('canvas');
-        canvas.width = 1200;  // proporção 2:1
+        canvas.width = 1200;   // proporção 2:1
         canvas.height = 600;
         const ctx = canvas.getContext('2d');
 
-        // Gráfico com dois eixos Y (mg/dL x g)
+        // Um único eixo Y para todas as linhas
         const chart = new Chart(ctx, {
           type: 'line',
           data: {
@@ -1492,7 +1526,6 @@
               {
                 label: 'Glicemia (mg/dL)',
                 data: series.glicemia,
-                yAxisID: 'yGlic',
                 borderColor: '#e11d48',
                 fill: false,
                 tension: 0.25,
@@ -1501,8 +1534,15 @@
               {
                 label: 'CHO + P + G (g)',
                 data: series.choPg,
-                yAxisID: 'yChoPg',
                 borderColor: '#1565c0',
+                fill: false,
+                tension: 0.25,
+                pointRadius: 2
+              },
+              {
+                label: 'Insulina Total (U)',
+                data: series.insTotal,
+                borderColor: '#16a34a',
                 fill: false,
                 tension: 0.25,
                 pointRadius: 2
@@ -1510,39 +1550,33 @@
             ]
           },
           options: {
-            animation: false,          // evita timing issues
-            responsive: false,         // canvas tem tamanho fixo
+            animation: false,
+            responsive: false,
             plugins: {
               legend: { position: 'bottom' },
-              title:  { display: false }
+              title: { display: false }
             },
             scales: {
-              x: { title: { display: true, text: 'Data/Hora' }, ticks: { autoSkip: true, maxTicksLimit: 8 } },
-              yGlic: {
-                type: 'linear',
-                position: 'left',
-                title: { display: true, text: 'mg/dL' },
-                beginAtZero: true
+              x: {
+                title: { display: true, text: 'Data/Hora (crescente)' },
+                ticks: { autoSkip: true, maxTicksLimit: 8 }
               },
-              yChoPg: {
-                type: 'linear',
-                position: 'right',
-                title: { display: true, text: 'g' },
+              y: {
                 beginAtZero: true,
-                grid: { drawOnChartArea: false } // para não confundir com o eixo da glicemia
+                title: { display: true, text: 'mg/dL / g / U' }
               }
             }
           }
         });
 
-        // Converte para imagem e adiciona no PDF
+        // Converte para imagem e insere no PDF em nova página
         const imgData = canvas.toDataURL('image/png');
-        chart.destroy(); // libera memória
+        chart.destroy();
 
         doc.addPage();
         doc.setFontSize(12);
-        doc.text('Gráfico — Glicemia vs CHO+P+G (período filtrado)', 15, 18);
-        // largura 180mm mantendo a proporção (1200x600 → 2:1) → altura ~90mm
+        doc.text('Gráfico — Glicemia vs CHO+P+G vs Insulina Total (período filtrado)', 15, 18);
+        // Largura ~180mm mantendo proporção 2:1 → altura ~90mm
         doc.addImage(imgData, 'PNG', 15, 24, 180, 90);
       }
 
@@ -1688,8 +1722,6 @@
         } catch (e) {
           console.warn('Falha ao gerar gráfico no PDF:', e);
         }
-
-
         doc.save('historico.pdf');
       });
     })();
