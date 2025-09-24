@@ -304,7 +304,7 @@
           <div class="menu-footer" style="padding:10px 12px; font-size:12px; color:var(--muted); border-top:1px solid var(--border); line-height:1.4; text-align:center;">
             <div>@upbots</div>
             <div>GlicoCerto</div>
-            <div>v1.9.10 Beta</div>
+            <div>v1.9.12 Beta</div>
           </div>
         </div>
       </div>
@@ -1356,6 +1356,22 @@
         return 'Paciente';
       }
 
+      async function getHipoHiper(){
+        try{
+          if (!USER_ID) throw new Error('no user');
+          const h = await getAuthHeaders();
+          const r = await fetch(`/api/paciente/${encodeURIComponent(USER_ID)}`, { headers: { ...h } });
+          const j = await r.json();
+          const hipo  = Number(j?.data?.hipo);
+          const hiper = Number(j?.data?.hiper);
+          if (Number.isFinite(hipo) && Number.isFinite(hiper)) return { hipo, hiper };
+        }catch(e){}
+        // fallback: inputs da tela
+        const toNum = (id)=> Number((document.getElementById(id)?.value||'').replace(',','.'));
+        const hipo  = toNum('hipo');
+        const hiper = toNum('hiper');
+        return { hipo, hiper };
+      }
 
       // === Icone (favicon ou .logo) para o cabeçalho
       async function getAppIconDataURL(sizePx = 128){
@@ -1510,18 +1526,75 @@
         if (!series || !series.labels.length) return;
 
         await ensureChartJs();
+        const { hipo, hiper } = await getHipoHiper();
 
-        // Canvas offscreen grande para boa definição no PDF
+        // Canvas offscreen grande (boa definição no PDF)
         const canvas = document.createElement('canvas');
-        canvas.width = 1200;   // proporção 2:1
+        canvas.width = 1200;   // 2:1
         canvas.height = 600;
         const ctx = canvas.getContext('2d');
 
-        // Um único eixo Y para todas as linhas
+        const plugins = [
+          // Fundo azul claro do gráfico
+          {
+            id: 'gc_bg',
+            beforeDraw: (chart) => {
+              const c = chart.canvas.getContext('2d');
+              c.save();
+              c.globalCompositeOperation = 'destination-over';
+              c.fillStyle = '#eaf4ff'; // azul bem claro
+              c.fillRect(0, 0, chart.width, chart.height);
+              c.restore();
+            }
+          },
+          // Faixas de hipo/hiper + linhas de referência (no eixo Y)
+          {
+            id: 'gc_bands',
+            beforeDraw: (chart) => {
+              if (!Number.isFinite(hipo) || !Number.isFinite(hiper)) return;
+
+              const { ctx, chartArea, scales } = chart;
+              const y = scales.y;
+              if (!y || !chartArea) return;
+
+              const L = chartArea.left, R = chartArea.right, T = chartArea.top, B = chartArea.bottom;
+
+              // Posições em pixels (atenção: Y cresce "pra baixo")
+              const yHipo  = y.getPixelForValue(hipo);
+              const yHiper = y.getPixelForValue(hiper);
+
+              // Limites da faixa (topo/baixo em pixels)
+              const yTop = Math.min(yHipo, yHiper);
+              const yBot = Math.max(yHipo, yHiper);
+
+              ctx.save();
+
+              // 1) Sombra ENTRE hipo e hiper
+              ctx.fillStyle = 'rgba(56, 189, 248, 0.15)'; // azul claro translúcido
+              // recorta aos limites do gráfico
+              const top = Math.max(T, yTop);
+              const bot = Math.min(B, yBot);
+              if (bot > top) ctx.fillRect(L, top, R - L, bot - top);
+
+              // 2) Linhas de referência (limites da faixa)
+              ctx.setLineDash([6, 4]);
+
+              ctx.strokeStyle = 'rgba(239, 68, 68, 0.85)'; // linha HIPO (vermelho)
+              ctx.beginPath(); ctx.moveTo(L, yHipo); ctx.lineTo(R, yHipo); ctx.stroke();
+
+              ctx.strokeStyle = 'rgba(234, 179, 8, 0.9)'; // linha HIPER (amarelo)
+              ctx.beginPath(); ctx.moveTo(L, yHiper); ctx.lineTo(R, yHiper); ctx.stroke();
+
+              ctx.restore();
+            }
+          }
+        ];
+
+        // Um único eixo Y para todas as séries
         const chart = new Chart(ctx, {
           type: 'line',
           data: {
-            labels: series.labels,
+            labels: series.labels,              // já em ordem crescente (pela extractSeriesFromTable)
             datasets: [
               {
                 label: 'Glicemia (mg/dL)',
@@ -1566,19 +1639,19 @@
                 title: { display: true, text: 'mg/dL / g / U' }
               }
             }
-          }
+          },
+          plugins
         });
 
-        // Converte para imagem e insere no PDF em nova página
         const imgData = canvas.toDataURL('image/png');
         chart.destroy();
 
         doc.addPage();
         doc.setFontSize(12);
         doc.text('Gráfico — Glicemia vs CHO+P+G vs Insulina Total (período filtrado)', 15, 18);
-        // Largura ~180mm mantendo proporção 2:1 → altura ~90mm
-        doc.addImage(imgData, 'PNG', 15, 24, 180, 90);
+        doc.addImage(imgData, 'PNG', 15, 24, 180, 90); // 180×90 mm = proporção 2:1
       }
+
 
 
       document.getElementById('btnBaixarPdf')?.addEventListener('click', async ()=>{
