@@ -37,10 +37,10 @@ app.use(express.static(path.join(__dirname, "public"))); // serve ./public
 
 // SDKs
 const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({ 
-    apiKey: process.env.OPENAI_API_KEY,
-    project: process.env.OPENAI_PROJECT || "proj_fDaZI981pUGD9Ua7gmNRn83o",
-  })
+  ? new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+      project: process.env.OPENAI_PROJECT, // não deixa hardcoded
+    })
   : null;
 
 // Supabase client com JWT do request (RLS)
